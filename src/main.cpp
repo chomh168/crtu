@@ -10,6 +10,7 @@
 #include "0.inverter_base.h"
 #include "1.growatt.h"
 #include <map>
+#include <iterator>
 //------------------
 static int chars_rxed = 0;
 static int  chars_rxed_0 = 0;
@@ -49,6 +50,8 @@ extern void drv_key_check(void);
 extern void drv_adc_internal(void);
 void vib_check(void);
 void black_out_check(void);
+void init_inverter(void);
+void loop_inverter(void);
 
 //-----------------------------------------------------
 
@@ -142,6 +145,12 @@ const float conversionFactor = 3.3f / (1 << 12);
 enum OPR_STAS{OPR_ON_IS,SYSPOWER_IS,PORTINIT_IS,VALLOAD_IS,SYSTIMER_IS
 	,UART_IS,I2C_IS,SPISET_IS,LCDSET_IS,ADC_IS};
 int gfSystem_state = 0 ;
+
+map<int,InverterBase*> inverters;
+InverterBase *nowInverter;
+vector<int> inverterKeys;
+int sendPacketCount;
+int keyIndex;
  
 int main() {
 #ifndef PICO_DEFAULT_LED_PIN
@@ -158,12 +167,7 @@ int main() {
 	gSysCnt = 0;
 	alarm_in_us(1000000 * 2);
 	gflcdsleep_n = 3000;
-	map<int,InverterBase*> inverters;
-	// InverterGrowatt inverterGrowatt1 = new InverterGrowatt(1);
-	inverters[501] = new InverterGrowatt(1);;
-	for (const auto& pair : inverters) {
-        printf("%d",pair.second->getBaudRate());
-    }
+
 //----------------ini-------------------------------------	
 	//const uint i2c_default = i2c1_inst ;
 	stdio_init_all();
@@ -187,7 +191,7 @@ int main() {
 	itrt_cnt = 0;
 	gpio_set_irq_enabled_with_callback(22, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
 	
-
+	dbgLevel = 1;
 	if(dbgLevel > 0){
 	// Send out a character without any conversions
 	uart_putc_raw(UART_ID_0, 'A');
@@ -247,7 +251,6 @@ int main() {
     drv_eep_at24c128();
     drv_lcd_1in5_oled();
     opr_send485tx();
-		
     }
 }
 
@@ -256,6 +259,28 @@ int main() {
 //			
 //	}
 //	
+void loop_inverter(){
+	if (nowInverter->getRecvOk()==true){
+		nowInverter->getSendPacketList()[sendPacketCount++];
+		if (nowInverter->getSendPacketList().size() == sendPacketCount){
+			sendPacketCount = 0;
+			if(keyIndex == (inverterKeys.size() - 1)) keyIndex = 0;
+			else keyIndex++;
+			nowInverter = inverters[keyIndex];
+		}
+	}
+}
+
+void init_inverter(){
+	inverters[501] = new InverterGrowatt(1);
+	nowInverter = inverters[501];
+	keyIndex = 0;
+	for (const auto& pair : inverters) {
+        printf("%d",pair.second->getBaudRate());
+		inverterKeys.push_back(pair.first);
+    }
+}
+
 void vib_check(void){
 	static int itrt_cnt_old =0;
 	static int interv = 1000;
