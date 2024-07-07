@@ -1,5 +1,5 @@
 #include "1.growatt.h"
-#include <vector>
+
 
 InverterGrowatt::InverterGrowatt(short invno) : InverterBase(invno) {
     this->setModel(5);

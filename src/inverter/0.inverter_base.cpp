@@ -6,7 +6,7 @@ InverterBase::InverterBase(short invno) : invno(invno) {}
 bool InverterBase::isValidRecvPacket(unsigned char* recvBuffer, int length){
     if (recvBuffer[0] != this->invno) return false;
     if (length != recvBuffer[2] + 5) return false;
-    if (!checkCRC(&(recvBuffer[length - 2]), calcCRC(recvBuffer, length - 2))) return false;
+    if (!checkCRC(&(recvBuffer[length - 2]), calCRC(recvBuffer, length - 2))) return false;
     return true;
 }
 
@@ -19,7 +19,7 @@ unsigned char* InverterBase::makeSendPacket(int func, int start, int length){
     packet[3] = start % 0x100;
     packet[4] = length / 0x100;
     packet[5] = length % 0x100;
-    unsigned int crc = calcCRC(packet, 6);
+    unsigned int crc = calCRC(packet, 6);
     packet[6] = crc % 0x100;
     packet[7] = crc / 0x100;
 
@@ -63,4 +63,8 @@ int InverterBase::getBaudRate(){
 
 void InverterBase::setBaudRate(int baudRate){
     this->baudRate = baudRate;
+}
+
+void InverterBase::setModel(short num){
+    this->model = num;
 }

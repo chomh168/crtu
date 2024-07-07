@@ -1434,7 +1434,7 @@ ui16 msg_send_2_iot_LTE(void){
 
 }
 
-void print_DBG_HS(uint8_t * addr){
+void print_DBG_HS(const char * addr){
 		sprintf(txdatadbg,addr);
 		my_puts_string(ToDbg);
 }

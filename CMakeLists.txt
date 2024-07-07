@@ -10,9 +10,9 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
 SET ( SRC_FILES
-        src/main.c
-        src/dot_iot.c
-        src/eep_at24c128.c
+        src/main.cpp
+        src/dot_iot.cpp
+        src/eep_at24c128.cpp
         src/OLED_1in5_test.c
         src/SRTU_V7.c
         #src/lib/Config/Dev_hardware_SPI.c
@@ -23,6 +23,7 @@ SET ( SRC_FILES
         src/lib/Fonts/font12.c 
         src/dot_flash.c
         #src/iot_nml35.c
+        src/util/util.cpp
         src/inverter/0.inverter_base.cpp
         src/inverter/1.growatt.cpp
         )

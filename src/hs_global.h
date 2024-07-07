@@ -359,7 +359,13 @@ static void alarm_in_us(uint32_t delay_us);
 extern float read_onboard_temperature(const char unit);
 extern void drv_eep_at24c128(void);
 extern void OLED_1in5_rgb_Init(void);
-extern void drv_lcd_1in5_oled(void);
+#ifdef __cplusplus
+extern "C" {
+#endif
+	extern void drv_lcd_1in5_oled(void);
+#ifdef __cplusplus
+}
+#endif
 extern int OLED_1in5_rgb_test(void);
 extern void my_putc( uart_inst_t * port, char val);
 

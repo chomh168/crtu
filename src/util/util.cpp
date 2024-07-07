@@ -35,7 +35,7 @@ const unsigned int crc16tab[] = {
     0x8201, 0x42C0, 0x4380, 0x8341, 0x4100, 0x81C1, 0x8081, 0x4040
 };
 
-unsigned int calcCRC(unsigned char bArray[], unsigned int bCnt)
+unsigned int calCRC(unsigned char bArray[], unsigned int bCnt)
 {
     unsigned int im;      
             
@@ -52,13 +52,13 @@ bool checkCRC(unsigned char recvCRC[], unsigned int calcCRC){
     return (recvCRC[0] == calcCRC % 0x100) && (recvCRC[1] == calcCRC / 0x100);
 }
 
-short ucharToShort(unsigned char* recvBuffer, bool reverse=false){
+short ucharToShort(unsigned char* recvBuffer, bool reverse){
     short result = recvBuffer[0] * 0x100 + recvBuffer[1];
     if (reverse) result = recvBuffer[1] * 0x100 + recvBuffer[0];
     return result;
 }
 
-unsigned int ucharToUint(unsigned char* recvBuffer, bool reverse=false){
+unsigned int ucharToUint(unsigned char* recvBuffer, bool reverse){
     unsigned int result = 0;
     result += recvBuffer[0] * 0x1000000;
     result += recvBuffer[1] * 0x10000;
@@ -73,7 +73,7 @@ unsigned int ucharToUint(unsigned char* recvBuffer, bool reverse=false){
     return result;
 }
 
-void shortToUcharArray(short value, unsigned char* array, short offset = 0) {
+void shortToUcharArray(short value, unsigned char* array, short offset) {
     array[offset] = static_cast<unsigned char>((value >> 8) & 0xFF); // 상위 바이트
     array[offset + 1] = static_cast<unsigned char>(value & 0xFF); // 하위 바이트
 }

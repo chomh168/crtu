@@ -50,7 +50,7 @@ public:
     int getBaudRate();
     void setBaudRate(int baudRate);
     short getModel();
-    void setModel(short baudRate);
+    void setModel(short num);
 };
 
 

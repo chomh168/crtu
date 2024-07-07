@@ -7,6 +7,9 @@
 
 #include "hs_global.h"
 #include "test.h"
+#include "0.inverter_base.h"
+#include "1.growatt.h"
+#include <map>
 //------------------
 static int chars_rxed = 0;
 static int  chars_rxed_0 = 0;
@@ -155,6 +158,12 @@ int main() {
 	gSysCnt = 0;
 	alarm_in_us(1000000 * 2);
 	gflcdsleep_n = 3000;
+	map<int,InverterBase*> inverters;
+	// InverterGrowatt inverterGrowatt1 = new InverterGrowatt(1);
+	inverters[501] = new InverterGrowatt(1);;
+	for (const auto& pair : inverters) {
+        pair.second->getBaudRate();
+    }
 //----------------ini-------------------------------------	
 	//const uint i2c_default = i2c1_inst ;
 	stdio_init_all();
@@ -219,10 +228,10 @@ int main() {
 	 		}
 	 		if(gNewCharInFlag){  
 	 			 gNewCharInFlag = 0;  
-	 			 drv_recev_inv_tV7();
+	 			//  drv_recev_inv_tV7();
 	 		}
 			rs_rece_uart0_iot();
-	 		drv_send_inv();
+	 		// drv_send_inv();
 	 	}
 //-----------------------------
 		rs_rece_usb_0();

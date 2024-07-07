@@ -61,7 +61,7 @@ int at24_write_byte (ui16 addr ,unsigned char val){
 	
 }
 
-int at24_read_byte (ui16 addr ,char *  dest){
+int at24_read_byte (ui16 addr , uint8_t *  dest){
 	int val_i;
 	unsigned char arr[3] = {0};
 	ui16 temp;
@@ -287,7 +287,7 @@ int reg_write(  i2c_inst_t *i2c,
 
     int num_bytes_read = 0;
     //uint8_t msg[nbytes +  1];
-	uint8_t *msg = malloc(nbytes +  1);
+	uint8_t *msg = (uint8_t*)malloc(nbytes +  1);
 
     // Check to make sure caller is sending 1 or more bytes
     if (nbytes < 1) {
