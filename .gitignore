@@ -1,0 +1,5 @@
+build
+tools
+.vscode
+*.h~
+*.hci
