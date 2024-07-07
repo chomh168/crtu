@@ -162,7 +162,7 @@ int main() {
 	// InverterGrowatt inverterGrowatt1 = new InverterGrowatt(1);
 	inverters[501] = new InverterGrowatt(1);;
 	for (const auto& pair : inverters) {
-        pair.second->getBaudRate();
+        printf("%d",pair.second->getBaudRate());
     }
 //----------------ini-------------------------------------	
 	//const uint i2c_default = i2c1_inst ;
