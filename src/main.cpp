@@ -50,6 +50,7 @@ extern void drv_key_check(void);
 extern void drv_adc_internal(void);
 void vib_check(void);
 void black_out_check(void);
+void pwrsw_check(void);
 void init_inverter(void);
 void loop_inverter(void);
 
@@ -86,7 +87,6 @@ void gpio_callback(uint gpio, uint32_t events){
  char   gNewCharInFlag = 0;
  //---------------------
  char gfLcdRefash = 0;
- char   gFlcdIni = 0;
  ui16 gflcdsleep_n = 0;
  
  char   gfUse_iot = 0;
@@ -186,7 +186,7 @@ int main() {
 	i2c_ini_dot();
 	adc_ini_crtu();
 	load_eep_page();
-
+	cdcd_init();
 	
 	itrt_cnt = 0;
 	gpio_set_irq_enabled_with_callback(22, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
@@ -244,6 +244,8 @@ int main() {
 //---------------------------
     //drv_send_uart0_inv();	
     //OLED_1in5_rgb_test_1();
+
+	pwrsw_check(); //  pwr off  -> on :  lcd ini at usb used 
     vib_check();
 		black_out_check();
     drv_key_check();
@@ -281,6 +283,38 @@ void init_inverter(){
     }
 }
 
+void pwrsw_check(void){
+	static sDrv_val sqc_pc = {0};
+	
+	if((gSysCnt - sqc_pc.cnt) < sqc_pc.delay ) return;
+	sqc_pc.cnt  = gSysCnt; 
+	
+	switch(sqc_pc.sqc){
+		case 0: // wait_boot on 
+			sqc_pc.delay = 5000;
+			sqc_pc.sqc++;
+			break;
+		case 1:
+			sqc_pc.delay = 1000;
+			sqc_pc.sqc++;
+			break;
+		case 2:	
+			if(gNowtemp < -30.0f) sqc_pc.sqc++;
+			break;
+		case 3:
+			if(gNowtemp > -30.0f) sqc_pc.sqc++;
+			break;
+		case 4:
+			sbi( gResetSw , LCD_RSW );
+			sqc_pc.sqc = 0;
+		default:
+			sqc_pc.sqc = 0;
+			break;
+			
+	}
+		
+}
+
 void vib_check(void){
 	static int itrt_cnt_old =0;
 	static int interv = 1000;
@@ -315,15 +349,13 @@ void black_out_check(void){
 		case 2:  
 			// go lcd sleep 
 			if(gfBlackOut == 0) sqc_boc = 0 ;
-			gFlcdIni = 1;
+			sbi(gResetSw, LCD_RSW);
 		break;
 		default:
 		break;	
 	}
 
 }
-
-
 
 void adc_ini_crtu(void){
 	adc_init();

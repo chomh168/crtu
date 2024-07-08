@@ -381,7 +381,7 @@ unsigned char Cmd_judge(char * dest){
                 my_puts_string (dbgSndPort);
             break;
 				  case 27:
-				  	gFlcdIni = 1;
+				  	// gFlcdIni = 1;
 				  	break;
 				  case 28:
 					case SOFT_RESET:	
@@ -527,18 +527,16 @@ unsigned char Cmd_judge(char * dest){
 					 case RESET_HSC_USB:
 
 									if(strncmp(subval_addr,"lcd",3) == 0){
-										gFlcdIni = 1;
-									}else if(strncmp(subval_addr,"lora",3) == 0){
+										sbi(gResetSw, LCD_RSW);
+									}else if(strncmp(subval_addr,"lora",4) == 0){
 									  sbi(gResetSw, LORA_RSW);
 									}else if(strncmp(subval_addr,"iot",3) == 0){
-										
+										sbi(gResetSw, IOT_RSW);
 									}else if(strncmp(subval_addr,"sys",3) == 0){
-										printf("now sys reboot....\r\n");
-										watchdog_enable(100, 1);
-										while(1);
+										sbi(gResetSw, SYSTEM_RSW);
+                    printf("now sys reboot....\r\n");
 									}else{
 										printf("option?:lcd,lora,iot,sys ..\r\n");									 
-									 //my_puts_string (dbgSndPort);
 									}
 						 break; 	
 					 case SET_COMMMNUM_HSC_USB:

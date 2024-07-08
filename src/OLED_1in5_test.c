@@ -275,33 +275,31 @@ void Paint_plug_l(void){
 }
 
 
-extern char gFlcdIni ;
+
 extern void drv_lcd_1in5_oled(void){
 	static int sDlSqc = 0;
 	static int cnt =0;
-	static int num = 0 ;
 	static UBYTE *BlackImage;
 	static UWORD Imagesize = ((OLED_1in5_WIDTH%2==0)? (OLED_1in5_WIDTH/2): (OLED_1in5_WIDTH/2+1)) * OLED_1in5_HEIGHT;
 	
 	switch(sDlSqc){
 		case 0:  // wait Sys stable
-			if((gSysCnt - cnt) < 220) break;
+			if((gSysCnt - cnt) < 1500) break;
 			printf("1.5inch RGB OLED test demo\n");
 			
 			DEV_GPIO_Init_h();
 //			dev_select_cs1(SELDEV_LCD);
 			
 			//DEV_HARDWARE_SPI_b1egin("/dev/spidev0.0");
-			num = 0;
+			OLED_Reset(1);
 			cnt = gSysCnt;
 			sDlSqc++;
 			break;
 		case 1:
-			if((gSysCnt - cnt) < 500) break;
+			if((gSysCnt - cnt) < 200) break;
 			cnt = gSysCnt;
-			OLED_Reset(num);
-			if(num >= 2) sDlSqc++;
-			else num++;
+			OLED_Reset(0);
+			sDlSqc++;
 			break;
 		case 2:
 			if((gSysCnt - cnt) < 2) break;
@@ -400,10 +398,10 @@ extern void drv_lcd_1in5_oled(void){
 			cnt = gSysCnt;
 			if(gfLcdRefash == 1) sDlSqc = 11;
 			if(gflcdsleep_n == 0){ 
-				sDlSqc = 13;
-				OLED_Reset(1); //--turn off oled panel
+				sDlSqc = 12;
+				OLED_WriteReg(0xAE);
 			}
-			if(gFlcdIni == 1)	sDlSqc = 14; 
+			if(isb(gResetSw,LCD_RSW))sDlSqc = 14; 
 			break;
 		case 11:
 			gfLcdRefash = 0;
@@ -411,28 +409,24 @@ extern void drv_lcd_1in5_oled(void){
 			sDlSqc = 10; 
 			break;
 		case 12:
-			sDlSqc = 10; 
+			if((gSysCnt - cnt) < 500) break;
+			sDlSqc = 13; 
 			break;
 		case 13:
-			if(gflcdsleep_n != 0){
-				OLED_Reset(0); //--turn off oled panel
+			if(gflcdsleep_n == 0) break;
+				//OLED_Reset(0); //--turn off oled panel
+				OLED_WriteReg(0xAF);
 				sDlSqc = 10;
-				
-				if(gFlcdIni == 1)	sDlSqc = 14; 
-			};
 			break;
 		case 14:
-				sDlSqc++;		
-			break;
 		default:	
 			if((gSysCnt - cnt) < 2000) break;
 			cnt = gSysCnt;
-			if(gFlcdIni == 1){ 
+			if(isb(gResetSw,LCD_RSW)){ 
 				sDlSqc = 0;
-				gFlcdIni= 0;
+				cbi(gResetSw, LCD_RSW);
 				cnt = gSysCnt;
 				}
 		break;
 	}
 }
-
