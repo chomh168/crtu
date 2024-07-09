@@ -72,6 +72,7 @@ enum HS_CMD_USB{
 	,RESET_HSC_USB
 	,SET_COMMMNUM_HSC_USB
 	,TOSS_232_HSC_USB
+  ,SLEEP_LCD_USBC
 	,HELP_HSC_USB
 	,MAX_NUM_FROMUSB
 };
@@ -87,6 +88,7 @@ char *frompccmd_str_usb[MAX_NUM_FROMUSB]={
 	"$rst",				 //8  
 	"$scm", 				 //9
 	"$sto", 				//10
+  "$slplcd",       // 11
 	"help"								 //MAX_NUM_FROMPCCMD - 1
 };
 	
@@ -96,6 +98,7 @@ char *frompccmd_str_usb[MAX_NUM_FROMUSB]={
 
 
 extern sInv_val inverter[21];
+extern ui16 gflcdsleep_n;
 
 
 int rssiLevel = 0;
@@ -562,6 +565,13 @@ unsigned char Cmd_judge(char * dest){
 								 printf("toss_mode ON!");
 							 }
 						 break;
+          case SLEEP_LCD_USBC:
+
+					 			gflcdsleep_n = 0;
+
+								printf("lcd_sleep!");
+
+					 	break;
 					 case (MAX_NUM_FROMUSB - 1):
 							 i = 1;
 							 while(1){

@@ -171,7 +171,7 @@ int main() {
 	alarm_fired = false;
 	gSysCnt = 0;
 	alarm_in_us(1000000 * 2);
-	gflcdsleep_n = 3000;
+	gflcdsleep_n = 1000;
 	uart_ini_rx_int();
 	init_inverter();
 
@@ -259,26 +259,28 @@ void recv_inv_raw_packet(){
 	static unsigned char invBuffer[0xff];
 	static int length = 0;
 
-	char raw = getchar1_h();
-	if (isValid){
-		if (invIndex == 2) length = raw;
-		invBuffer[invIndex++] = raw;
-		if (invIndex == length + 5) {
-			if(nowInverter->isValidRecvPacket(invBuffer, invIndex)){
-				nowInverter->decodePacket(invBuffer);
-				nowInverter->setRecvOk(true);
-				nowInverter->setValid(true);
+	if(rx_wr_index1 != rx_rd_index1){
+		char raw = getchar1_h();
+		if (isValid){
+			if (invIndex == 2) length = raw;
+			invBuffer[invIndex++] = raw;
+			if (invIndex == length + 5) {
+				if(nowInverter->isValidRecvPacket(invBuffer, invIndex)){
+					nowInverter->decodePacket(invBuffer);
+					nowInverter->setRecvOk(true);
+					nowInverter->setValid(true);
+				}
+				isValid = false;
 			}
-			isValid = false;
+			else if (invIndex > length + 5) isValid = false;
 		}
-		else if (invIndex > length + 5) isValid = false;
-	}
-	if (raw == nowInverter->invno) {
-		isValid = true;
-		invIndex = 0;
-		length = 0;
-		memset(invBuffer, 0, 0xff);
-		invBuffer[invIndex++] = raw; 
+		if (raw == nowInverter->invno) {
+			isValid = true;
+			invIndex = 0;
+			length = 0;
+			memset(invBuffer, 0, 0xff);
+			invBuffer[invIndex++] = raw; 
+		}
 	}
 }
 
@@ -310,8 +312,8 @@ void set_send_inv_packet(){
 			sendPacketCount = 0;
 			if(keyIndex == (inverterKeys.size() - 1)) keyIndex = 0;
 			else keyIndex++;
-			nowInverter = inverters[keyIndex];
-			if(preBuadRate != nowInverter->getBaudRate()) uart_init(UART_ID_1, nowInverter->getBaudRate());
+			nowInverter = inverters[inverterKeys[keyIndex]];
+			if(preBuadRate != nowInverter->getBaudRate()) uart_set_baudrate(UART_ID_1, nowInverter->getBaudRate());
 		}
 	}
 }
@@ -322,6 +324,9 @@ void init_inverter(){
 	uart_init(UART_ID_1, nowInverter->getBaudRate());
 	preBuadRate = nowInverter->getBaudRate();
 	keyIndex = 0;
+	sendPacketCount = 0;
+	unsigned char* sendPacket = nowInverter->getSendPacketList()[sendPacketCount];
+	copy(sendPacket, sendPacket + sizeof(sendPacket)/sizeof(sendPacket[0]), txdataInv);
 	for (const auto& pair : inverters) {
         printf("%d",pair.second->getBaudRate());
 		inverterKeys.push_back(pair.first);
@@ -368,7 +373,7 @@ void vib_check(void){
 	if((gSysCnt - itrt_cnt_old) < 1000 ) return;
 	itrt_cnt_old  = gSysCnt; 
 
-	if(itrt_cnt > 10){
+	if(itrt_cnt > 5){
 		itrt_cnt = 0;
 		printf("vib!!");
 		gflcdsleep_n = 3000;
@@ -388,7 +393,7 @@ void black_out_check(void){
 			if(gfBlackOut == 1) sqc_boc++;
 		break;	
 		case 1:
-			DEC(gflcdsleep_n);
+			// DEC(gflcdsleep_n);
 			if(gfBlackOut == 0) sqc_boc++;
 		break;	
 		case 2:  
@@ -1133,9 +1138,10 @@ void showHL(void)	{
 								gkey = NO_KEY;
 							}
 					case 0:
+						break;
 					default:
 								
-							my_puts_string(ToDbg);
+							// my_puts_string(ToDbg);
 							//sprintf(txdataIot,"[%02d:%03d:%02d:%02d:%02d]\r\n",year,day,TT,mimu,sec);
 							//my_puts_string(ToIot);
 							DEC(dbgLevel);
