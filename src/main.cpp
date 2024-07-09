@@ -54,6 +54,7 @@ void pwrsw_check(void);
 void init_inverter(void);
 void check_delay_inv(void);
 void set_send_inv_packet(void);
+void recv_inv_raw_packet(void);
 
 //-----------------------------------------------------
 
@@ -248,6 +249,7 @@ int main() {
 		check_delay_inv();
 		set_send_inv_packet();
 		opr_send485tx();
+		recv_inv_raw_packet();
     }
 }
 
