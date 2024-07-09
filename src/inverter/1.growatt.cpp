@@ -4,6 +4,7 @@
 InverterGrowatt::InverterGrowatt(short invno) : InverterBase(invno) {
     this->setModel(5);
     this->setBaudRate(9600);
+    this->setSerializeLength(58);
     this->sendPacketList.push_back(this->makeSendPacket(4, 0, 0x6f));
 }
 
@@ -71,7 +72,7 @@ void InverterGrowatt::decodePacket(unsigned char* recvBuffer){
 }
 
 unsigned char* InverterGrowatt::serialize(){
-    unsigned char serialBuffer[116] = {0,};
+    unsigned char serialBuffer[this->getSerializeLength()] = {0,};
     shortToUcharArray(this->invno, serialBuffer, 0);
     shortToUcharArray(this->dcv, serialBuffer, 1);
     shortToUcharArray(this->dca, serialBuffer, 2);

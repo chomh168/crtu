@@ -4,8 +4,8 @@
 InverterBase::InverterBase(short invno) : invno(invno) {}
 
 bool InverterBase::isValidRecvPacket(unsigned char* recvBuffer, int length){
-    if (recvBuffer[0] != this->invno) return false;
-    if (length != recvBuffer[2] + 5) return false;
+    // if (recvBuffer[0] != this->invno) return false;
+    // if (length != recvBuffer[2] + 5) return false;
     if (!checkCRC(&(recvBuffer[length - 2]), calCRC(recvBuffer, length - 2))) return false;
     return true;
 }
@@ -67,4 +67,18 @@ void InverterBase::setBaudRate(int baudRate){
 
 void InverterBase::setModel(short num){
     this->model = num;
+}
+
+bool InverterBase::getValid(){
+    return this->valid;
+}
+void InverterBase::setValid(bool valid){
+    this->model = valid;
+}
+
+int InverterBase::getSerializeLength(){
+    return this->serializeLength;
+}
+void InverterBase::setSerializeLength(int length){
+    this->serializeLength = length;
 }

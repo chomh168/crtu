@@ -52,7 +52,8 @@ void vib_check(void);
 void black_out_check(void);
 void pwrsw_check(void);
 void init_inverter(void);
-void loop_inverter(void);
+void check_delay_inv(void);
+void set_send_inv_packet(void);
 
 //-----------------------------------------------------
 
@@ -151,6 +152,9 @@ InverterBase *nowInverter;
 vector<int> inverterKeys;
 int sendPacketCount;
 int keyIndex;
+int preBuadRate;
+bool isInvSendDelay = false;
+int invSendDelay;
  
 int main() {
 #ifndef PICO_DEFAULT_LED_PIN
@@ -168,6 +172,7 @@ int main() {
 	alarm_in_us(1000000 * 2);
 	gflcdsleep_n = 3000;
 	uart_ini_rx_int();
+	init_inverter();
 
 //----------------ini-------------------------------------	
 	//const uint i2c_default = i2c1_inst ;
@@ -233,30 +238,78 @@ int main() {
     //drv_send_uart0_inv();	
     //OLED_1in5_rgb_test_1();
 
-	pwrsw_check(); //  pwr off  -> on :  lcd ini at usb used 
-    vib_check();
+		pwrsw_check(); //  pwr off  -> on :  lcd ini at usb used 
+    	vib_check();
 		black_out_check();
-    drv_key_check();
+    	drv_key_check();
 		drv_adc_internal();
-    drv_eep_at24c128();
-    drv_lcd_1in5_oled();
-    opr_send485tx();
+		drv_eep_at24c128();
+		drv_lcd_1in5_oled();
+		check_delay_inv();
+		set_send_inv_packet();
+		opr_send485tx();
     }
 }
 
-//	
-//	void drv_send_uart0_inv(void){
-//			
-//	}
-//	
-void loop_inverter(){
-	if (nowInverter->getRecvOk()==true){
-		nowInverter->getSendPacketList()[sendPacketCount++];
+void recv_inv_raw_packet(){
+	static bool isValid = false;
+	static int invIndex = 0;
+	static unsigned char invBuffer[0xff];
+	static int length = 0;
+
+	char raw = getchar1_h();
+	if (isValid){
+		if (invIndex == 2) length = raw;
+		invBuffer[invIndex++] = raw;
+		if (invIndex == length + 5) {
+			if(nowInverter->isValidRecvPacket(invBuffer, invIndex)){
+				nowInverter->decodePacket(invBuffer);
+				nowInverter->setRecvOk(true);
+				nowInverter->setValid(true);
+			}
+			isValid = false;
+		}
+		else if (invIndex > length + 5) isValid = false;
+	}
+	if (raw == nowInverter->invno) {
+		isValid = true;
+		invIndex = 0;
+		length = 0;
+		memset(invBuffer, 0, 0xff);
+		invBuffer[invIndex++] = raw; 
+	}
+}
+
+void check_delay_inv(){
+	static int delayCount = 0;
+
+	if((gSysCnt - invSendDelay) < 1000 ) return;
+	invSendDelay = gSysCnt;
+
+	if(delayCount > 2) {
+		isInvSendDelay = true;
+		delayCount = 0;
+	}
+	else {
+		sendReactionTriger = 1;
+	}
+}
+
+void set_send_inv_packet(){
+	if (nowInverter->getRecvOk() == true || isInvSendDelay == true){
+		unsigned char* sendPacket = nowInverter->getSendPacketList()[sendPacketCount++];
+		copy(sendPacket, sendPacket + sizeof(sendPacket)/sizeof(sendPacket[0]), txdataInv);
+		sendReactionTriger = 1;
+
+		invSendDelay = gSysCnt; 
+		isInvSendDelay = false;
+		
 		if (nowInverter->getSendPacketList().size() == sendPacketCount){
 			sendPacketCount = 0;
 			if(keyIndex == (inverterKeys.size() - 1)) keyIndex = 0;
 			else keyIndex++;
 			nowInverter = inverters[keyIndex];
+			if(preBuadRate != nowInverter->getBaudRate()) uart_init(UART_ID_1, nowInverter->getBaudRate());
 		}
 	}
 }
@@ -264,6 +317,8 @@ void loop_inverter(){
 void init_inverter(){
 	inverters[501] = new InverterGrowatt(1);
 	nowInverter = inverters[501];
+	uart_init(UART_ID_1, nowInverter->getBaudRate());
+	preBuadRate = nowInverter->getBaudRate();
 	keyIndex = 0;
 	for (const auto& pair : inverters) {
         printf("%d",pair.second->getBaudRate());
@@ -977,10 +1032,19 @@ void proc_1ms_tic(void) // no intterupt
   DEC(gDbgFuseCnt);
 	DEC(gflcdsleep_n);
 	//watch-dog 
-  if(proc_1s % 2)
+  if(gSysTimer % 2)
 			gpio_put(HW_WATCHDOG, ON);
 	else 
 			gpio_put(HW_WATCHDOG, OFF);	
+	if(gResetSw && bv(SYSTEM_RSW)){
+		printf("NowSystem reset....");
+		cbi(gResetSw ,SYSTEM_RSW);
+		cdcd_reset(0);
+		watchdog_enable(100, 1);
+		while(1);
+	}
+
+	
 
   if(tic_60s++ < 59) return;
 	tic_60s = 0;

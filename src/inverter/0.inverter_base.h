@@ -13,12 +13,14 @@ using namespace std;
 class InverterBase{
 private:
     bool recvOk;
+    bool valid;
     int baudRate;
     short model;
+    int serializeLength;
 protected:
-    short invno;
     vector<unsigned char*> sendPacketList;
 public:
+    short invno;
 	short dcv;
 	short dca;
 	short dckw;
@@ -51,6 +53,10 @@ public:
     void setBaudRate(int baudRate);
     short getModel();
     void setModel(short num);
+    bool getValid();
+    void setValid(bool valid);
+    int getSerializeLength();
+    void setSerializeLength(int length);
 };
 
 
