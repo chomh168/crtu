@@ -10,15 +10,14 @@ bool InverterBase::isValidRecvPacket(unsigned char* recvBuffer, int length){
     return true;
 }
 
-unsigned char* InverterBase::makeSendPacket(int func, int start, int length){
+unsigned char* InverterBase::makeModbusSendPacket(int func, int start, int count){
     unsigned char* packet = new unsigned char[8];
-    memset(packet, 0, 8);
     packet[0] = invno;
     packet[1] = func;
     packet[2] = start / 0x100;
     packet[3] = start % 0x100;
-    packet[4] = length / 0x100;
-    packet[5] = length % 0x100;
+    packet[4] = count / 0x100;
+    packet[5] = count % 0x100;
     unsigned int crc = calCRC(packet, 6);
     packet[6] = crc % 0x100;
     packet[7] = crc / 0x100;
@@ -79,6 +78,11 @@ void InverterBase::setValid(bool valid){
 int InverterBase::getSerializeLength(){
     return this->serializeLength;
 }
+
 void InverterBase::setSerializeLength(int length){
     this->serializeLength = length;
+}
+
+int InverterBase::getPacketLength(){
+    return this->packetLength;
 }

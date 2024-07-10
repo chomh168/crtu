@@ -19,6 +19,7 @@ private:
     int serializeLength;
 protected:
     vector<unsigned char*> sendPacketList;
+    int packetLength;
 public:
     short invno;
 	short dcv;
@@ -44,7 +45,7 @@ public:
     virtual void clearValue() = 0;
 
     bool isValidRecvPacket(unsigned char* recvBuffer, int length);
-    unsigned char* makeSendPacket(int func, int start, int length);
+    unsigned char* makeModbusSendPacket(int func, int start, int count);
     vector<unsigned char*> getSendPacketList();
     void clearBaseValue();
     bool getRecvOk();
@@ -57,6 +58,7 @@ public:
     void setValid(bool valid);
     int getSerializeLength();
     void setSerializeLength(int length);
+    int getPacketLength();
 };
 
 

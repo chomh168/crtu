@@ -154,8 +154,8 @@ vector<int> inverterKeys;
 int sendPacketCount;
 int keyIndex;
 int preBuadRate;
-bool isInvSendDelay = false;
-int invSendDelay;
+bool isInvResponseDelay = false;
+int invResponseDelay;
  
 int main() {
 #ifndef PICO_DEFAULT_LED_PIN
@@ -287,26 +287,34 @@ void recv_inv_raw_packet(){
 void check_delay_inv(){
 	static int delayCount = 0;
 
-	if((gSysCnt - invSendDelay) < 1000 ) return;
-	invSendDelay = gSysCnt;
+	if((gSysCnt - invResponseDelay) < 1000) return;
+	invResponseDelay = gSysCnt;
+	delayCount++;
 
 	if(delayCount > 2) {
-		isInvSendDelay = true;
+		isInvResponseDelay = true;
 		delayCount = 0;
 	}
 	else {
+		unsigned char* sendPacket = nowInverter->getSendPacketList()[sendPacketCount];
+		int length = nowInverter->getPacketLength();
+		txdataInv[0] = length;
+		copy(sendPacket, sendPacket + length, txdataInv + 1);
 		sendReactionTriger = 1;
 	}
 }
 
 void set_send_inv_packet(){
-	if (nowInverter->getRecvOk() == true || isInvSendDelay == true){
+	if (nowInverter->getRecvOk() == true || isInvResponseDelay == true){
 		unsigned char* sendPacket = nowInverter->getSendPacketList()[sendPacketCount++];
-		copy(sendPacket, sendPacket + sizeof(sendPacket)/sizeof(sendPacket[0]), txdataInv);
+		int length = nowInverter->getPacketLength();
+		txdataInv[0] = length;
+		copy(sendPacket, sendPacket + length, txdataInv + 1);
 		sendReactionTriger = 1;
 
-		invSendDelay = gSysCnt; 
-		isInvSendDelay = false;
+		invResponseDelay = gSysCnt; 
+		isInvResponseDelay = false;
+		nowInverter->setRecvOk(false);
 		
 		if (nowInverter->getSendPacketList().size() == sendPacketCount){
 			sendPacketCount = 0;
@@ -840,7 +848,8 @@ void on_stdio_usb_rx() {
 }
 
 void my_puts_string(char port ){
-     char * addr; 
+     int length=0;
+	 char * addr; 
      char dummy_port;
      
      switch(port){
@@ -852,12 +861,14 @@ void my_puts_string(char port ){
 							printf("%s",txdatadbg);
 							memset(txdatadbg,0,sizeof(txdatadbg)); 
             	}
-            addr = &txdataInv[0];
-            while(uart_is_writable(UART_ID_1)){
-                if(*addr == 0)break;
-        		uart_putc(UART_ID_1, *addr);
-        		*addr++=0;
-            }
+            addr = &txdataInv[1];
+			length = txdataInv[0];
+
+			txdataInv[0] = 0;
+			for(int i = 0 ; i < length ; i++){
+				uart_putc(UART_ID_1, addr[i]);
+        		addr[i]=0;
+			}
             //irq_set_enabled((uint)UART_ID, true);
         break;
         case ToIot:
