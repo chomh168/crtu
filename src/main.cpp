@@ -156,6 +156,7 @@ int keyIndex;
 int preBuadRate;
 bool isInvResponseDelay = false;
 int invResponseDelay;
+unsigned char invBuffer[0xff];
  
 int main() {
 #ifndef PICO_DEFAULT_LED_PIN
@@ -218,22 +219,20 @@ int main() {
 //-----------------------------
       
 
-     if(gfUse_iot == IOT_MODEM){
-	 		if(gMode_232 == KT_M2M){
-	 		 	drv_sendTcpControlM2M(); 
-	 		}else{
-	 			drv_sendTcpControlLTE();
-	 		}
-	 		if(gNewCharInFlag){  
-	 			 gNewCharInFlag = 0;  
-	 			//  drv_recev_inv_tV7();
-	 		}
+		if(gfUse_iot == IOT_MODEM){
+			if(gMode_232 == KT_M2M){
+				drv_sendTcpControlM2M(); 
+			}else{
+				drv_sendTcpControlLTE();
+			}
+			if(gNewCharInFlag){  
+				gNewCharInFlag = 0;  
+			}
 			rs_rece_uart0_iot();
-	 		// drv_send_inv();
-	 	}
+		}
 //-----------------------------
 		rs_rece_usb_0();
-		rs_rece_uart1_inv();
+		// rs_rece_uart1_inv();
     
 //---------------------------
     //drv_send_uart0_inv();	
@@ -256,12 +255,12 @@ int main() {
 void recv_inv_raw_packet(){
 	static bool isValid = false;
 	static int invIndex = 0;
-	static unsigned char invBuffer[0xff];
 	static int length = 0;
 
 	if(rx_wr_index1 != rx_rd_index1){
 		char raw = getchar1_h();
 		if (isValid){
+			if (invIndex == 1 && (raw != 3 && raw != 4)) isValid = false;
 			if (invIndex == 2) length = raw;
 			invBuffer[invIndex++] = raw;
 			if (invIndex == length + 5) {
@@ -272,14 +271,18 @@ void recv_inv_raw_packet(){
 				}
 				isValid = false;
 			}
-			else if (invIndex > length + 5) isValid = false;
+			else if (invIndex > length + 5) {
+				isValid = false;
+				invIndex = 0;
+				length = 0;
+			}
 		}
-		if (raw == nowInverter->invno) {
+		else if (raw == nowInverter->invno) {
 			isValid = true;
 			invIndex = 0;
 			length = 0;
 			memset(invBuffer, 0, 0xff);
-			invBuffer[invIndex++] = raw; 
+			invBuffer[invIndex++] = raw;
 		}
 	}
 }
@@ -305,7 +308,9 @@ void check_delay_inv(){
 }
 
 void set_send_inv_packet(){
+	if((gSysCnt - invResponseDelay) < 1000) return;
 	if (nowInverter->getRecvOk() == true || isInvResponseDelay == true){
+		invResponseDelay = gSysCnt;
 		unsigned char* sendPacket = nowInverter->getSendPacketList()[sendPacketCount++];
 		int length = nowInverter->getPacketLength();
 		txdataInv[0] = length;
@@ -328,6 +333,7 @@ void set_send_inv_packet(){
 
 void init_inverter(){
 	inverters[501] = new InverterGrowatt(1);
+	inverters[501]->clearValue(true);
 	nowInverter = inverters[501];
 	uart_init(UART_ID_1, nowInverter->getBaudRate());
 	preBuadRate = nowInverter->getBaudRate();
@@ -630,7 +636,7 @@ void drv_adc_internal(void){
 			gNowBattLv = cal_btl(volt);
 			volt = avg_val[2] * conversion_factor;
 			gNowBLack_V = volt;
-			printf("batt: %0.2f, BL : %0.2f V , tmp:%0.2f \n",gNowBattLv, gNowBLack_V, gNowtemp);
+			// printf("batt: %0.2f, BL : %0.2f V , tmp:%0.2f \n",gNowBattLv, gNowBLack_V, gNowtemp);
 			
 			if(gNowBLack_V > 1) bl_cnt++;
 			else DEC(bl_cnt);
@@ -972,14 +978,14 @@ void opr_send485tx(void)
    // #if (__DEBUG_MODE_)
    			if(0) //dbg_show_flag == 1)
 			{	
-          	 	 if((gSysCnt - send_replay_timer) < 20) break;
+          	 	//  if((gSysCnt - send_replay_timer) < 20) break;
            		 send_replay_timer = 20;
            		 //my_puts_string(dbg_data);
 			}
   //  #endif    
             send_replay_state++;
         case 3:
-            if((gSysCnt - send_replay_timer) < 100) break;
+            // if((gSysCnt - send_replay_timer) < 100) break;
             my_puts_string(ToINV);
             send_replay_timer = gSysCnt ; 
             send_replay_state++;
@@ -993,7 +999,7 @@ void opr_send485tx(void)
             //rx_wr_index0=0;
             break;
         case 5:
-            if((gSysCnt - send_replay_timer) < 50) break;
+            if((gSysCnt - send_replay_timer) < 10) break; //50
 //#if !(__DEBUG_MODE_)
 //			if(dbg_show_flag == 0)
             tx_onoff485(OFF);
@@ -1360,86 +1366,85 @@ void rs_rece_uart1_inv(void)
 char rp_cmd_buf0[RX_BUFFER_SIZE0] = {0};
 char pk_buf[PK_BUFFER_SIZE] = {0};
 
-void rs_rece_uart0_iot(void)
-     {
-       char data , dtBuf  ;
-       static ui16 subCmdStatPosition= 0;
-       static char olddata;
-       static int receive_timeout;
-       unsigned char  rp_cmd_sub_sqc0;
-	   static unsigned int sCntuCnt = 0;
-	   
-       char cmdbuf[RX_BUFFER_SIZE0+5] = {0} ;
+void rs_rece_uart0_iot(void) {
+    char data, dtBuf;
+    static ui16 subCmdStatPosition = 0;
+    static char olddata;
+    static int receive_timeout;
+    unsigned char rp_cmd_sub_sqc0;
+    static unsigned int sCntuCnt = 0;
 
-	   static unsigned int  rp_cmd_len0;
-	   static unsigned char rp_cmd_sqc0;
-	   static unsigned int  rp_cmd_idx0;
+    char cmdbuf[RX_BUFFER_SIZE0 + 5] = {
+        0
+    };
 
-       switch(rp_cmd_sqc0)
-       {
-       case 0:
-         rp_cmd_len0 = 0;
-         rp_cmd_idx0 = 0;
-         rp_cmd_sub_sqc0 = 0;
-         subCmdStatPosition = 0;
-         rp_cmd_sqc0++; 
-         receive_timeout  = gSysCnt;
-		 sCntuCnt = 0;
-         break;
-       case 1:
-           if(rx_wr_index0 != rx_rd_index0) {
-               gDbgFuseCnt = 5; 
-               data = getchar0_h ();
-               receive_timeout = gSysCnt;
-			   if(sCntuCnt == 0){
-			   	  sCntuCnt = 200;
-				  sprintf(cmdbuf,"<1:");
-			      my_nputs_string (ToDbg, cmdbuf, 3 );
-			   	}
-			   
-               switch(data)
-               {
-               case ' ':  //CR                //--  check < 
-                  // if(olddata == '>') gImd_reaction = 1;
-               case 0x0a:
-                   if(olddata == 0x0d) rp_cmd_sqc0++;
-               
-               default:
-         //        if(dbgLevel > 0)
-         //          putchar1 (data);
-                 if(rp_cmd_len0 >= (RX_BUFFER_SIZE0 - 2)) rp_cmd_len0 = (RX_BUFFER_SIZE0 - 2);
-                 rp_cmd_buf0[rp_cmd_len0++] = data;
-                 rp_cmd_buf0[rp_cmd_len0] = 0;
-                 olddata = data;
+    static unsigned int rp_cmd_len0;
+    static unsigned char rp_cmd_sqc0;
+    static unsigned int rp_cmd_idx0;
+
+    switch (rp_cmd_sqc0) {
+    case 0:
+        rp_cmd_len0 = 0;
+        rp_cmd_idx0 = 0;
+        rp_cmd_sub_sqc0 = 0;
+        subCmdStatPosition = 0;
+        rp_cmd_sqc0++;
+        receive_timeout = gSysCnt;
+        sCntuCnt = 0;
+        break;
+    case 1:
+        if (rx_wr_index0 != rx_rd_index0) {
+            gDbgFuseCnt = 5;
+            data = getchar0_h();
+            receive_timeout = gSysCnt;
+            if (sCntuCnt == 0) {
+                sCntuCnt = 200;
+                sprintf(cmdbuf, "<1:");
+                my_nputs_string(ToDbg, cmdbuf, 3);
+            }
+
+            switch (data) {
+            case ' ': //CR                //--  check < 
+                // if(olddata == '>') gImd_reaction = 1;
+            case 0x0a:
+                if (olddata == 0x0d) rp_cmd_sqc0++;
+
+            default:
+                //        if(dbgLevel > 0)
+                //          putchar1 (data);
+                if (rp_cmd_len0 >= (RX_BUFFER_SIZE0 - 2)) rp_cmd_len0 = (RX_BUFFER_SIZE0 - 2);
+                rp_cmd_buf0[rp_cmd_len0++] = data;
+                rp_cmd_buf0[rp_cmd_len0] = 0;
+                olddata = data;
                 break;
-               }
-             }
-             if(gSysCnt != receive_timeout ){
-			 	receive_timeout = gSysCnt;
-				DEC(sCntuCnt);
-             	}
-			 if(sCntuCnt == 0){
-			 	 if(rp_cmd_len0 != 0)
-				 rp_cmd_sqc0++;
-			 	}	 
-         break;
-       case 2:
-		   	 memcpy(cmdbuf,rp_cmd_buf0,rp_cmd_len0);
-			 my_nputs_string (ToDbg, cmdbuf, rp_cmd_len0 );
-//			 memcpy(txdataInv,cmdbuf,rp_cmd_len0);
-//		     sendReactionTriger = 1;
-	   
-         //Cmd_judge (rp_cmd_buf0);
-         
-         rp_cmd_sub_sqc0 = 0;
-         rp_cmd_sqc0 = 0;
-         break;
-       case 3:
-       default:
-         rp_cmd_sqc0 = 0;
-         break;
-       }
-     }
+            }
+        }
+        if (gSysCnt != receive_timeout) {
+            receive_timeout = gSysCnt;
+            DEC(sCntuCnt);
+        }
+        if (sCntuCnt == 0) {
+            if (rp_cmd_len0 != 0)
+                rp_cmd_sqc0++;
+        }
+        break;
+    case 2:
+        memcpy(cmdbuf, rp_cmd_buf0, rp_cmd_len0);
+        my_nputs_string(ToDbg, cmdbuf, rp_cmd_len0);
+        //			 memcpy(txdataInv,cmdbuf,rp_cmd_len0);
+        //		     sendReactionTriger = 1;
+
+        // Cmd_judge(rp_cmd_buf0);
+
+        rp_cmd_sub_sqc0 = 0;
+        rp_cmd_sqc0 = 0;
+        break;
+    case 3:
+    default:
+        rp_cmd_sqc0 = 0;
+        break;
+    }
+}
 
 	 
 	 void rs_rece_uart0_lora(void)

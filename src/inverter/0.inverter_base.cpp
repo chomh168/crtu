@@ -4,8 +4,6 @@
 InverterBase::InverterBase(short invno) : invno(invno) {}
 
 bool InverterBase::isValidRecvPacket(unsigned char* recvBuffer, int length){
-    // if (recvBuffer[0] != this->invno) return false;
-    // if (length != recvBuffer[2] + 5) return false;
     if (!checkCRC(&(recvBuffer[length - 2]), calCRC(recvBuffer, length - 2))) return false;
     return true;
 }
@@ -25,7 +23,7 @@ unsigned char* InverterBase::makeModbusSendPacket(int func, int start, int count
     return packet;
 }
 
-void InverterBase::clearBaseValue(){
+void InverterBase::clearBaseValue(bool totalReset){
     this->dcv = 0;
 	this->dca = 0;
 	this->dckw = 0;
@@ -42,6 +40,10 @@ void InverterBase::clearBaseValue(){
 	this->fault[1] = 0;
 	this->fault[2] = 0;
 	this->fault[3] = 0;
+    if(totalReset){
+        this->dayTotal = 0;
+        this->total = 0;
+    }
 }
 
 vector<unsigned char*> InverterBase::getSendPacketList(){

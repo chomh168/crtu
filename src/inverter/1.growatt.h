@@ -17,7 +17,7 @@ public:
 	InverterGrowatt(short invno);
 	void decodePacket(unsigned char* recvBuffer) override;
 	unsigned char* serialize() override;
-    void clearValue() override;
+    void clearValue(bool totalReset) override;
 };
 
 #endif /* GROWATT_H_ */

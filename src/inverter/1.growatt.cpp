@@ -108,8 +108,8 @@ unsigned char* InverterGrowatt::serialize(){
     return serialBuffer;
 }
 
-void InverterGrowatt::clearValue(){
-    this->clearBaseValue();
+void InverterGrowatt::clearValue(bool totalReset){
+    this->clearBaseValue(totalReset);
     this->invTemp1 = 0;
 	this->invTemp2 = 0;
 	this->invTemp3 = 0;

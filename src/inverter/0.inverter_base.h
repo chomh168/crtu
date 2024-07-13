@@ -42,12 +42,12 @@ public:
 
     virtual void decodePacket(unsigned char* recvBuffer) = 0;
     virtual unsigned char* serialize() = 0;
-    virtual void clearValue() = 0;
+    virtual void clearValue(bool totalReset) = 0;
 
     bool isValidRecvPacket(unsigned char* recvBuffer, int length);
     unsigned char* makeModbusSendPacket(int func, int start, int count);
     vector<unsigned char*> getSendPacketList();
-    void clearBaseValue();
+    void clearBaseValue(bool totalReset);
     bool getRecvOk();
     void setRecvOk(bool recvOk);
     int getBaudRate();
