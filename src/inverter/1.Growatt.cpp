@@ -1,4 +1,4 @@
-#include "1.growatt.h"
+#include "1.Growatt.h"
 
 
 InverterGrowatt::InverterGrowatt(short invno) : InverterBase(invno) {
@@ -9,7 +9,7 @@ InverterGrowatt::InverterGrowatt(short invno) : InverterBase(invno) {
     this->sendPacketList.push_back(this->makeModbusSendPacket(4, 0, 0x6f));
 }
 
-void InverterGrowatt::decodePacket(unsigned char* recvBuffer){
+void InverterGrowatt::decodePacket(unsigned char* recvBuffer, int sendPacketCount){
     this->fault[0] = ucharToShort(&recvBuffer[3]);
     
     int dckw = ucharToUint(&recvBuffer[5]);
@@ -75,35 +75,35 @@ void InverterGrowatt::decodePacket(unsigned char* recvBuffer){
 unsigned char* InverterGrowatt::serialize(){
     unsigned char* serialBuffer = new unsigned char[this->getSerializeLength()];
     shortToUcharArray(this->invno, serialBuffer, 0);
-    shortToUcharArray(this->dcv, serialBuffer, 1);
-    shortToUcharArray(this->dca, serialBuffer, 2);
-    shortToUcharArray(this->dckw, serialBuffer, 3);
-    shortToUcharArray(this->acar, serialBuffer, 4);
-    shortToUcharArray(this->acas, serialBuffer, 5);
-    shortToUcharArray(this->acat, serialBuffer, 6);
-    shortToUcharArray(this->acvr, serialBuffer, 7);
-    shortToUcharArray(this->acvs, serialBuffer, 8);
-    shortToUcharArray(this->acvt, serialBuffer, 9);
-    shortToUcharArray(this->ackw, serialBuffer, 10);
-    shortToUcharArray(this->pf, serialBuffer, 11);
-    shortToUcharArray(this->freq, serialBuffer, 12);
-    shortToUcharArray(this->invTemp1, serialBuffer, 13);
-    shortToUcharArray(this->invTemp2, serialBuffer, 14);
-    shortToUcharArray(this->invTemp3, serialBuffer, 15);
-    shortToUcharArray(this->dayTotal/0x10000, serialBuffer, 16);
-    shortToUcharArray(this->dayTotal%0x10000, serialBuffer, 17);
-    shortToUcharArray(this->total/0x10000, serialBuffer, 18);
-    shortToUcharArray(this->total%0x10000, serialBuffer, 19);
+    shortToUcharArray(this->dcv, serialBuffer, 2);
+    shortToUcharArray(this->dca, serialBuffer, 4);
+    shortToUcharArray(this->dckw, serialBuffer, 6);
+    shortToUcharArray(this->acar, serialBuffer, 8);
+    shortToUcharArray(this->acas, serialBuffer, 10);
+    shortToUcharArray(this->acat, serialBuffer, 12);
+    shortToUcharArray(this->acvr, serialBuffer, 14);
+    shortToUcharArray(this->acvs, serialBuffer, 16);
+    shortToUcharArray(this->acvt, serialBuffer, 18);
+    shortToUcharArray(this->ackw, serialBuffer, 20);
+    shortToUcharArray(this->pf, serialBuffer, 22);
+    shortToUcharArray(this->freq, serialBuffer, 24);
+    shortToUcharArray(this->invTemp1, serialBuffer, 26);
+    shortToUcharArray(this->invTemp2, serialBuffer, 28);
+    shortToUcharArray(this->invTemp3, serialBuffer, 30);
+    shortToUcharArray(this->dayTotal/0x10000, serialBuffer, 32);
+    shortToUcharArray(this->dayTotal%0x10000, serialBuffer, 34);
+    shortToUcharArray(this->total/0x10000, serialBuffer, 36);
+    shortToUcharArray(this->total%0x10000, serialBuffer, 38);
 
-    shortToUcharArray(this->fault[0], serialBuffer, 20);
-    shortToUcharArray(this->fault[1], serialBuffer, 21);
-    shortToUcharArray(this->fault[2], serialBuffer, 22);
-    shortToUcharArray(this->fault[3], serialBuffer, 23);
-    shortToUcharArray(this->addtionalFault[0], serialBuffer, 24);
-    shortToUcharArray(this->addtionalFault[1], serialBuffer, 25);
-    shortToUcharArray(this->addtionalFault[2], serialBuffer, 26);
-    shortToUcharArray(this->addtionalFault[3], serialBuffer, 27);
-    shortToUcharArray(this->addtionalFault[4], serialBuffer, 28);
+    shortToUcharArray(this->fault[0], serialBuffer, 40);
+    shortToUcharArray(this->fault[1], serialBuffer, 42);
+    shortToUcharArray(this->fault[2], serialBuffer, 44);
+    shortToUcharArray(this->fault[3], serialBuffer, 46);
+    shortToUcharArray(this->addtionalFault[0], serialBuffer, 48);
+    shortToUcharArray(this->addtionalFault[1], serialBuffer, 50);
+    shortToUcharArray(this->addtionalFault[2], serialBuffer, 52);
+    shortToUcharArray(this->addtionalFault[3], serialBuffer, 54);
+    shortToUcharArray(this->addtionalFault[4], serialBuffer, 56);
 
     return serialBuffer;
 }

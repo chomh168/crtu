@@ -40,7 +40,7 @@ public:
 
     InverterBase(short invno);
 
-    virtual void decodePacket(unsigned char* recvBuffer) = 0;
+    virtual void decodePacket(unsigned char* recvBuffer, int sendPacketCount) = 0;
     virtual unsigned char* serialize() = 0;
     virtual void clearValue(bool totalReset) = 0;
 

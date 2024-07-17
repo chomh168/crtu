@@ -7,8 +7,9 @@
 
 #include "hs_global.h"
 #include "test.h"
-#include "0.inverter_base.h"
-#include "1.growatt.h"
+// #include "0.inverter_base.h"
+// #include "1.Growatt.h"
+#include "inverter.h"
 #include <map>
 #include <iterator>
 //------------------
@@ -46,6 +47,7 @@ extern int save_eep_page (void);
 extern int load_eep_page (void);
 //extern void drv_lora_nml35(void);
 extern char Cmd_judge_lora(char * dest);
+extern char Cmd_judge(char * dest);
 extern void drv_key_check(void);
 extern void drv_adc_internal(void);
 void vib_check(void);
@@ -55,6 +57,7 @@ void init_inverter(void);
 void check_delay_inv(void);
 void set_send_inv_packet(void);
 void recv_inv_raw_packet(void);
+void send_iot_count(void);
 
 //-----------------------------------------------------
 
@@ -157,6 +160,10 @@ int preBuadRate;
 bool isInvResponseDelay = false;
 int invResponseDelay;
 unsigned char invBuffer[0xff];
+char serverCharBody[1024] = {0};
+map<short,vector<char>> serverBody;
+map<short,int> modelSerializeLength;
+char serverHeader[20] = {0};
  
 int main() {
 #ifndef PICO_DEFAULT_LED_PIN
@@ -215,7 +222,7 @@ int main() {
 	   on_stdio_usb_rx();
 		 //------------------------------------------
 	   showHL();
-	   //drv_temp_check();	
+	//    drv_temp_check();	
 //-----------------------------
       
 
@@ -249,7 +256,76 @@ int main() {
 		set_send_inv_packet();
 		opr_send485tx();
 		recv_inv_raw_packet();
+		send_iot_count();
     }
+}
+
+int makeSendBodyPacket(){
+	for (const auto& pair : inverters) {
+		if(pair.second->getValid()){
+			unsigned char* serialPacket = pair.second->serialize();
+			auto body = serverBody[pair.second->getModel()];
+			body.insert(body.end(), serialPacket, serialPacket + pair.second->getSerializeLength());
+			serverBody[pair.second->getModel()] = body;
+		}
+    }
+	return serverBody.size();
+}
+
+void setCharArrayByInt(char* arr, int value, int byte) {
+    for (int i = 0; i < byte; ++i) {
+        arr[i] = (value >> (8 * (byte - 1 - i))) & 0xFF;
+    }
+}
+
+void makeSendHeaderPacket(int bodyLength, int model, int moduleCount){
+	int id = 1;
+	setCharArrayByInt(&serverHeader[0], id, 4);
+	setCharArrayByInt(&serverHeader[4], bodyLength, 4);
+	setCharArrayByInt(&serverHeader[8], 1, 2); //packet Type - 1: inverter
+	setCharArrayByInt(&serverHeader[10], model, 2);
+	setCharArrayByInt(&serverHeader[12], moduleCount, 2);
+}
+
+int getCurrentBodyPacket(){
+	int packetSize = 0;
+	auto bodyIt = serverBody.begin();
+	if (bodyIt->second.size() == 0) {
+		bodyIt = next(bodyIt);
+	}
+	if (bodyIt == serverBody.end()) {
+		bodyIt = serverBody.begin();
+		return packetSize;
+	}
+	makeSendHeaderPacket(bodyIt->second.size(), bodyIt->first, bodyIt->second.size()/modelSerializeLength[bodyIt->first]);
+	bodyIt->second.insert(bodyIt->second.begin(), serverHeader, serverHeader+14);
+	packetSize = bodyIt->second.size();
+	memcpy(serverCharBody, bodyIt->second.data(), bodyIt->second.size());
+	bodyIt->second.clear();
+	return packetSize;
+}
+
+void send_iot_count(){
+	static int sendServerDelay = 0;
+	static int delayCount = 0;
+	static bool firstSend = true;
+	bool trigger = false;
+	if((gSysCnt - sendServerDelay) < 1000) return;
+	sendServerDelay = gSysCnt;
+	delayCount++;
+	if(delayCount > 60 && firstSend){
+		firstSend = false;
+		trigger = true;
+	}
+	if(delayCount > 60 * 5) {
+		trigger = true;
+	}
+
+	if(trigger){
+		triggerServer(makeSendBodyPacket());
+		delayCount = 0;
+		trigger = false;
+	}
 }
 
 void recv_inv_raw_packet(){
@@ -265,7 +341,7 @@ void recv_inv_raw_packet(){
 			invBuffer[invIndex++] = raw;
 			if (invIndex == length + 5) {
 				if(nowInverter->isValidRecvPacket(invBuffer, invIndex)){
-					nowInverter->decodePacket(invBuffer);
+					nowInverter->decodePacket(invBuffer, sendPacketCount);
 					nowInverter->setRecvOk(true);
 					nowInverter->setValid(true);
 				}
@@ -335,6 +411,7 @@ void init_inverter(){
 	inverters[501] = new InverterGrowatt(1);
 	inverters[501]->clearValue(true);
 	nowInverter = inverters[501];
+	modelSerializeLength[nowInverter->getModel()] = nowInverter->getSerializeLength();
 	uart_init(UART_ID_1, nowInverter->getBaudRate());
 	preBuadRate = nowInverter->getBaudRate();
 	keyIndex = 0;
@@ -342,7 +419,6 @@ void init_inverter(){
 	unsigned char* sendPacket = nowInverter->getSendPacketList()[sendPacketCount];
 	copy(sendPacket, sendPacket + sizeof(sendPacket)/sizeof(sendPacket[0]), txdataInv);
 	for (const auto& pair : inverters) {
-        printf("%d",pair.second->getBaudRate());
 		inverterKeys.push_back(pair.first);
     }
 }
@@ -1434,7 +1510,7 @@ void rs_rece_uart0_iot(void) {
         //			 memcpy(txdataInv,cmdbuf,rp_cmd_len0);
         //		     sendReactionTriger = 1;
 
-        // Cmd_judge(rp_cmd_buf0);
+        Cmd_judge(rp_cmd_buf0);
 
         rp_cmd_sub_sqc0 = 0;
         rp_cmd_sqc0 = 0;

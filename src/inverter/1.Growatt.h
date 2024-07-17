@@ -1,7 +1,6 @@
 #ifndef GROWATT_H_
 #define GROWATT_H_
 
-// #include "../util/util.h"
 #include "0.inverter_base.h"
 
 
@@ -15,7 +14,7 @@ public:
 	short addtionalFault[5];
 
 	InverterGrowatt(short invno);
-	void decodePacket(unsigned char* recvBuffer) override;
+	void decodePacket(unsigned char* recvBuffer, int sendPacketCount) override;
 	unsigned char* serialize() override;
     void clearValue(bool totalReset) override;
 };

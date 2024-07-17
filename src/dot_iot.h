@@ -13,6 +13,7 @@ enum IOT_CHECK_FLAG{
       ,TCPSENDDATA_ICF
       ,NEWMSGCHECK_ICF
       ,READMSG_ICF
+      ,CSQ_ICF
       };
 
 
@@ -24,6 +25,7 @@ enum STATE_IOT_MODUAL{
       ,WSOCREATE_STIOT
       ,WSOCOPEN_STIOT
       ,APP_READY
+      ,WSOWRITE_STIOT
       };
 
 

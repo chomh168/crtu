@@ -61,7 +61,6 @@ typedef unsigned int WORD;
 
 
 
-
 //-------def-----------------
 #define UBYTE   uint8_t
 #define UWORD   uint16_t
@@ -371,7 +370,9 @@ extern int OLED_1in5_rgb_test(void);
 extern void my_putc( uart_inst_t * port, char val);
 
 void gpio_hs (const uint gpNum, char onoff );
-
+void triggerServer(int count);
+int getCurrentBodyPacket();
+int makeSendBodyPacket();
 
 //-----------------------------------------------------------------------
 extern int gSysCnt;

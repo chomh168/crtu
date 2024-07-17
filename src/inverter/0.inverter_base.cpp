@@ -66,6 +66,10 @@ void InverterBase::setBaudRate(int baudRate){
     this->baudRate = baudRate;
 }
 
+short InverterBase::getModel(){
+    return this->model;
+}
+
 void InverterBase::setModel(short num){
     this->model = num;
 }
