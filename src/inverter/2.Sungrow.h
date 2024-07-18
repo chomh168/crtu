@@ -7,6 +7,8 @@
 class InverterSungrow : public InverterBase {
 private:
 	int packetSendLength[2];
+	short dcvs[12];
+	short dcas[12];
 
 public:
 	short invTemp;

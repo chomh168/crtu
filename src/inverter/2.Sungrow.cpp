@@ -4,7 +4,7 @@
 InverterSungrow::InverterSungrow(short invno) : InverterBase(invno) {
     this->setModel(7);
     this->setBaudRate(9600);
-    this->setSerializeLength(58);//todo
+    this->setSerializeLength(42);//todo
     this->packetLength = 8;
     this->packetSendLength[0] = 80;
     this->sendPacketList.push_back(this->makeModbusSendPacket(3, 5003, this->packetSendLength[0]));
@@ -14,64 +14,66 @@ InverterSungrow::InverterSungrow(short invno) : InverterBase(invno) {
 
 void InverterSungrow::decodePacket(unsigned char* recvBuffer, int sendPacketCount){
     if(recvBuffer[2] == this->packetSendLength[0] * 2){
+        this->dayTotal = ucharToShort(&recvBuffer[3])/10;
+        this->total = ucharToUint(&recvBuffer[5]);
+        this->invTemp = ucharToShort(&recvBuffer[13])/10;
 
+        this->dcvs[0] = ucharToShort(&recvBuffer[19]);
+        this->dcas[0] = ucharToShort(&recvBuffer[21]);
+        this->dcvs[1] = ucharToShort(&recvBuffer[23]);
+        this->dcas[1] = ucharToShort(&recvBuffer[25]);
+        this->dcvs[2] = ucharToShort(&recvBuffer[27]);
+        this->dcas[2] = ucharToShort(&recvBuffer[29]);
+
+        int dckw = ucharToUint(&recvBuffer[31]);
+        this->dckw = (short)(dckw/1000);
+
+        this->acvr = ucharToShort(&recvBuffer[35])/10;
+        this->acvs = ucharToShort(&recvBuffer[37])/10;
+        this->acvt = ucharToShort(&recvBuffer[39])/10;
+
+        this->acas = ucharToShort(&recvBuffer[41])/10;
+        this->acas = ucharToShort(&recvBuffer[43])/10;
+        this->acas = ucharToShort(&recvBuffer[45])/10;
+
+        int ackw = ucharToUint(&recvBuffer[59]);
+        this->ackw = (short)(ackw/1000);
+
+        this->pf = ucharToShort(&recvBuffer[67])/1000;
+        this->freq = ucharToShort(&recvBuffer[69])/10;
+
+        // Work state
+        this->fault[0] = ucharToShort(&recvBuffer[73]);
+        // Fault/Alarm code 1
+        this->fault[1] = ucharToShort(&recvBuffer[87]);
+        // Work state
+        this->fault[2] = ucharToShort(&recvBuffer[159]);
+        this->fault[3] = ucharToShort(&recvBuffer[161]);
     }
     if(recvBuffer[2] == this->packetSendLength[1] * 2){
-        
+        dcvs[3] = ucharToShort(&recvBuffer[3]);
+        dcvs[4] = ucharToShort(&recvBuffer[7]);
+        dcvs[5] = ucharToShort(&recvBuffer[11]);
+        dcvs[6] = ucharToShort(&recvBuffer[15]);
+        dcvs[7] = ucharToShort(&recvBuffer[19]);
+        dcvs[8] = ucharToShort(&recvBuffer[33]);
+        dcvs[9] = ucharToShort(&recvBuffer[37]);
+        dcvs[10] = ucharToShort(&recvBuffer[41]);
+        dcvs[11] = ucharToShort(&recvBuffer[45]);
+
+        dcas[3] = ucharToShort(&recvBuffer[5]);
+        dcas[4] = ucharToShort(&recvBuffer[9]);
+        dcas[5] = ucharToShort(&recvBuffer[13]);
+        dcas[6] = ucharToShort(&recvBuffer[17]);
+        dcas[7] = ucharToShort(&recvBuffer[21]);
+        dcas[8] = ucharToShort(&recvBuffer[35]);
+        dcas[9] = ucharToShort(&recvBuffer[39]);
+        dcas[10] = ucharToShort(&recvBuffer[43]);
+        dcas[11] = ucharToShort(&recvBuffer[47]);
+
+        this->dcv = *max_element(this->dcvs, this->dcvs + 12)/10;
+        this->dca = accumulate(this->dcas, this->dcas + 12, 0)/10;
     }
-    this->fault[0] = ucharToShort(&recvBuffer[3]);
-    
-    int dckw = ucharToUint(&recvBuffer[5]);
-    this->dckw = (short)(dckw/1000);
-    
-    int dcvs[8];
-    dcvs[0] = ucharToShort(&recvBuffer[9]);
-    dcvs[1] = ucharToShort(&recvBuffer[17]);
-    dcvs[2] = ucharToShort(&recvBuffer[25]);
-    dcvs[3] = ucharToShort(&recvBuffer[33]);
-    dcvs[4] = ucharToShort(&recvBuffer[41]);
-    dcvs[5] = ucharToShort(&recvBuffer[49]);
-    dcvs[6] = ucharToShort(&recvBuffer[57]);
-    dcvs[7] = ucharToShort(&recvBuffer[65]);
-    
-    this->dcv = *max_element(dcvs, dcvs + 8);
-
-    int dcas[8];
-    dcas[0] = ucharToShort(&recvBuffer[11]);
-    dcas[1] = ucharToShort(&recvBuffer[19]);
-    dcas[2] = ucharToShort(&recvBuffer[27]);
-    dcas[3] = ucharToShort(&recvBuffer[35]);
-    dcas[4] = ucharToShort(&recvBuffer[43]);
-    dcas[5] = ucharToShort(&recvBuffer[51]);
-    dcas[6] = ucharToShort(&recvBuffer[59]);
-    dcas[7] = ucharToShort(&recvBuffer[67]);
-
-    this->dca = accumulate(dcas, dcas + 8, 0);
-
-    int ackw = ucharToUint(&recvBuffer[73]);
-    this->ackw = (short)(ackw/1000);
-
-    this->freq = ucharToShort(&recvBuffer[77]);
-
-    this->acvr = ucharToShort(&recvBuffer[79]);
-    this->acar = ucharToShort(&recvBuffer[81]);
-
-    this->acvs = ucharToShort(&recvBuffer[87]);
-    this->acas = ucharToShort(&recvBuffer[89]);
-
-    this->acvt = ucharToShort(&recvBuffer[95]);
-    this->acat = ucharToShort(&recvBuffer[97]);
-
-    this->dayTotal = ucharToUint(&recvBuffer[109]);
-    this->total = ucharToUint(&recvBuffer[113]);
-
-    this->invTemp = ucharToShort(&recvBuffer[189]);
-
-    this->pf = ucharToShort(&recvBuffer[205]);
-
-    this->fault[1] = ucharToShort(&recvBuffer[211]);
-    this->fault[2] = ucharToShort(&recvBuffer[213]);
-    this->fault[3] = ucharToShort(&recvBuffer[215]);
 }
 
 unsigned char* InverterSungrow::serialize(){
@@ -90,15 +92,14 @@ unsigned char* InverterSungrow::serialize(){
     shortToUcharArray(this->pf, serialBuffer, 22);
     shortToUcharArray(this->freq, serialBuffer, 24);
     shortToUcharArray(this->invTemp, serialBuffer, 26);
-    shortToUcharArray(this->dayTotal/0x10000, serialBuffer, 32);
-    shortToUcharArray(this->dayTotal%0x10000, serialBuffer, 34);
-    shortToUcharArray(this->total/0x10000, serialBuffer, 36);
-    shortToUcharArray(this->total%0x10000, serialBuffer, 38);
+    shortToUcharArray(this->dayTotal, serialBuffer, 28);
+    shortToUcharArray(this->total/0x10000, serialBuffer, 30);
+    shortToUcharArray(this->total%0x10000, serialBuffer, 32);
 
-    shortToUcharArray(this->fault[0], serialBuffer, 40);
-    shortToUcharArray(this->fault[1], serialBuffer, 42);
-    shortToUcharArray(this->fault[2], serialBuffer, 44);
-    shortToUcharArray(this->fault[3], serialBuffer, 46);
+    shortToUcharArray(this->fault[0], serialBuffer, 34);
+    shortToUcharArray(this->fault[1], serialBuffer, 36);
+    shortToUcharArray(this->fault[2], serialBuffer, 38);
+    shortToUcharArray(this->fault[3], serialBuffer, 40);
 
     return serialBuffer;
 }
