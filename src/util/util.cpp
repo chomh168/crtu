@@ -77,3 +77,21 @@ void shortToUcharArray(short value, unsigned char* array, short offset) {
     array[offset] = static_cast<unsigned char>((value >> 8) & 0xFF); // 상위 바이트
     array[offset + 1] = static_cast<unsigned char>(value & 0xFF); // 하위 바이트
 }
+
+vector<string> split(const char* str, char delimiter) {
+    vector<string> result;
+    const char* start = str;
+    const char* end = strchr(start, delimiter);
+
+    while (end != nullptr) {
+        result.emplace_back(start, end - start);
+        start = end + 1;
+        end = strchr(start, delimiter);
+    }
+    
+    if (*start != '\0') {
+        result.emplace_back(start);
+    }
+
+    return result;
+}

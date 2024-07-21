@@ -178,6 +178,10 @@ int save_eep_page (void){
 	uEepv.su.EEP_MODE_232  = ee.P_MODE_232;
 	uEepv.su.EEP_BPS_485  = ee.P_BPS_485;
 	uEepv.su.eeDevNum_485comm = (ui16)devInfo.devNum_485comm ;
+	for(int i = 0 ; i < 20 ; i++){
+		uEepv.su.eeModelInverters[i] = ee.eeModelInverters[i];
+		uEepv.su.eeModelInverterIds[i] = ee.eeModelInverterIds[i];
+	}
 
 	data[0] = 0;
 	data[1] = 0;
@@ -244,7 +248,11 @@ int load_eep_page (void){
 	ee.ModelInverter =	 (unsigned char)uEepv.su.eeModelInverter ; 
 	ee.P_MODE_232 = (char) uEepv.su.EEP_MODE_232	; 
 	ee.P_BPS_485 =	 (char)uEepv.su.EEP_BPS_485 	; 
-  devInfo.devNum_485comm = (int)uEepv.su.eeDevNum_485comm;
+  	devInfo.devNum_485comm = (int)uEepv.su.eeDevNum_485comm;
+  	for(int i = 0 ; i < 20 ; i++){
+		ee.eeModelInverters[i] = uEepv.su.eeModelInverters[i];
+		ee.eeModelInverterIds[i] = uEepv.su.eeModelInverterIds[i];
+	}
 	return err_code;
 }
 

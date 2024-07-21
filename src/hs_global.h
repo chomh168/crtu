@@ -223,6 +223,8 @@ typedef struct	{
 	char ModelInverter;
 	char P_MODE_232;
 	char P_BPS_485;
+	unsigned int eeModelInverters[20];
+	unsigned int eeModelInverterIds[20];
 }see; 
 
 typedef struct	{
@@ -246,6 +248,8 @@ typedef struct	{
 	ui16 eemode;
 	ui16 eeDevNum_485comm;
 	ui16 dummy_endof_eepval;
+	ui16 eeModelInverters[20];
+	ui16 eeModelInverterIds[20];
 }ssu;
 
 
@@ -380,7 +384,12 @@ extern char gValIniFalg;
 extern my_dev devInfo;
 
 //--------------------
-
+enum HEADER_PACKET_TPYE{
+	SERVER_ACK = 0,
+	CLIENT_INVERTER = 1,
+	CLIENT_ERROR = 11,
+	SERVER_RESET = 100
+};
 
 //----gval------------------
 enum RST_SW{SYSTEM_RSW,LORA_RSW,IOT_RSW,LCD_RSW};

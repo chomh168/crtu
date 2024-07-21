@@ -78,7 +78,7 @@ bool InverterBase::getValid(){
     return this->valid;
 }
 void InverterBase::setValid(bool valid){
-    this->model = valid;
+    this->valid = valid;
 }
 
 int InverterBase::getSerializeLength(){

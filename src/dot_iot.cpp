@@ -1,5 +1,5 @@
 #include "hs_global.h"
-
+#include "util/util.h"
 #include "dot_iot.h"
 #include "dot_flash.h"
 
@@ -18,7 +18,7 @@ enum HS_CMD {
   TOSS_232, 
   LORA_RST_CMD, 
   HELP, 
-  MAX_NUM_FROMPCCMD = 38
+  MAX_NUM_FROMPCCMD = 41
 };
 
 char* frompccmd_str_m2m[MAX_NUM_FROMPCCMD] = {
@@ -59,8 +59,11 @@ char* frompccmd_str_m2m[MAX_NUM_FROMPCCMD] = {
   "$sto", //32
   "$lrst", //33
   "ERROR", //34
-  "+WSOWR", //35
-  "+WSORD", //36
+  "+WSOWR:", //35
+  "+WSORD=", //36
+  "+CMT:", //37
+  "$setRTU:", //38
+  "Reset", //39
   "help" //MAX_NUM_FROMPCCMD - 1
 };
 
@@ -143,6 +146,18 @@ void my_putc(uart_inst_t* uart, char val) {
   uart_putc(uart, val);
 }
 
+int charsToInt(char tens, char ones) {
+  if (isdigit(tens) && isdigit(ones)) {
+    int tensDigit = tens - '0';
+    int onesDigit = ones - '0';
+
+    return tensDigit * 0x10 + onesDigit;
+  } else {
+    printf("Error: Non-digit character input");
+    return -1;
+  }
+}
+
 unsigned char Cmd_judge(char* dest) {
   char tcmd_code = 0;
   char tmp_c;
@@ -161,12 +176,12 @@ unsigned char Cmd_judge(char* dest) {
   sni buff = {
     0
   };
+  vector<string> strSplit;
+  int serverCode = 0;
 
   // match 1cmd
   i = (MAX_NUM_FROMPCCMD - 1);
   while (i) {
-    //strcpyf(cmd_buf,frompccmd_str_m2m[i]);
-    //subCmdValIndex = strcspn(frompccmd_str_m2m[i],srt_4comp_prompc);
     subCmdValIndex = strlen(frompccmd_str_m2m[i]);
     addr = dest;
     while (* addr) {
@@ -183,12 +198,10 @@ unsigned char Cmd_judge(char* dest) {
     subval_addr++;
   }
 
-  //if((i != 11) && (dbgLevel == 0)) dbgSndPort = 0xff;
-
   switch (i) {
   case 0:
-    sprintf(dbgSendbuf, "No_cmd,%d", i);
-    my_puts_string(dbgSndPort);
+    // sprintf(dbgSendbuf, "No_cmd,%d", i);
+    // my_puts_string(dbgSndPort);
     break;
   case 1: // 0x0d0x0a -> not action 
     break;
@@ -276,7 +289,6 @@ unsigned char Cmd_judge(char* dest) {
     break;
   case 12:
     strncpy(cmd_buf, subval_addr, 30);
-    sprintf(dbgSendbuf, "socket open=%s", cmd_buf);
     if(strstr(cmd_buf, "OPEN_CMPL") != nullptr){ //  || (cmd_buf[0] == '1' && cmd_buf[2] == 'O')
       sbi(iotState, WSOCOPEN_STIOT);
       bRxOk = 1;
@@ -287,7 +299,6 @@ unsigned char Cmd_judge(char* dest) {
     else{
       
     }
-    my_puts_string(dbgSndPort);
     break;
   case 13:
     strncpy(cmd_buf, subval_addr, 30);
@@ -340,9 +351,9 @@ unsigned char Cmd_judge(char* dest) {
     my_puts_string(dbgSndPort);
     break;
   case 22:
-    sprintf(dbgSendbuf, "rOK\r\n", datetime);
+    // sprintf(dbgSendbuf, "rOK\r\n", datetime);
+    // my_puts_string(dbgSndPort);
     bRxOk = 1;
-    my_puts_string(dbgSndPort);
     break;
   case SAVE_HSC:
     gdataSaveFlag = 1;
@@ -426,13 +437,42 @@ unsigned char Cmd_judge(char* dest) {
     break;
   case 35:
     strncpy(cmd_buf, subval_addr, 10);
-    if(cmd_buf[0]=='1'){
+    if(strstr(cmd_buf,"1,0") != nullptr){
       sbi(iotState, WSOWRITE_STIOT);
       bRxOk = 1;
     }
     break;
-  case 36:
+  case 36: //SERVER
     strncpy(cmd_buf, subval_addr, 100);
+    serverCode = charsToInt(cmd_buf[8], cmd_buf[9]);
+    if (serverCode == SERVER_ACK) {//SERVER_ACK
+      sbi(iotState, WSOREAD_STIOT); // count
+      printf("server ACK %d\r\n", (iotState & bv(WSOREAD_STIOT)));
+    } 
+    if (serverCode == SERVER_RESET) {
+      sbi(gResetSw, SYSTEM_RSW);
+      printf("now sys reboot....\r\n");
+    }
+    printf("rec : %s, %c",cmd_buf, cmd_buf[9]);
+    break;
+  // case 37: //SMS
+  // //   strncpy(cmd_buf, subval_addr, 200);
+  // //   printf("msg : %s", cmd_buf);
+  //   break;
+  case 38:
+    strncpy(cmd_buf, subval_addr, 200);
+    strSplit = split(cmd_buf,'/');
+    ee.PortNumber = stoi(strSplit[0]);
+    for(int i = 0; i < strSplit.size()/2 ; i++){
+      ee.PortNumber = stoi(strSplit[1 + i*2]);
+      ee.PortNumber = stoi(strSplit[2 + i*2]);
+    }
+    save_eep_page();
+    sbi(gResetSw, SYSTEM_RSW);
+    break;
+  case 39:
+    sbi(gResetSw, SYSTEM_RSW);
+    printf("now sys reboot....\r\n");
     break;
   case (MAX_NUM_FROMPCCMD - 1):
     i = 1;
@@ -513,8 +553,8 @@ unsigned char Cmd_judge_usb(char* dest) {
 
   switch (i) {
   case NO_HSC_USB:
-    sprintf(dbgSendbuf, "No_cmd,%d", i);
-    my_puts_string(dbgSndPort);
+    // sprintf(dbgSendbuf, "No_cmd,%d", i);
+    // my_puts_string(dbgSndPort);
     break;
   case END_CHAR_HSC_USB: // 0x0d0x0a -> not action 
   case OK_HSC_USB:
@@ -724,7 +764,7 @@ unsigned char ul_2_uc(unsigned char num, ul32 val) {
 
 void makeIotPacketLTE(){
   int packetSize = getCurrentBodyPacket();
-  serverCharBody[packetSize] = (gfBlackOut/0x100)&0xff;
+  serverCharBody[packetSize]   = (gfBlackOut/0x100)&0xff;
   serverCharBody[packetSize+1] = (gfBlackOut%0x100);
   serverCharBody[packetSize+2] = ((int)gNowtemp/0x100)&0xff;
   serverCharBody[packetSize+3] = ((int)gNowtemp%0x100);
@@ -736,6 +776,7 @@ void makeIotPacketLTE(){
     sprintf(buf,"%02X",serverCharBody[i]);
     strcat(txdataIot, buf);
   }
+  strcat(txdataIot, "\r\n");
   memset(serverCharBody, 0, sizeof(serverCharBody));
 }
 
@@ -1287,6 +1328,7 @@ ui16 msg_send_2_iot_LTE(void) {
   static char inv_num = 1;
   // static int nowCount = 0;
   static int failCount = 0;
+  static int waitCount = 0;
 
   if (iotSendSw & bv(CLOCK_ICF)) {
     sprintf(txdataIot, "AT+CCLK?\r\n");
@@ -1325,32 +1367,33 @@ ui16 msg_send_2_iot_LTE(void) {
   if (iotSendSw & bv(TCPSENDDATA_ICF)) {
     switch (sub_sqc) {
     case 0:
-      static int openErrorCount = 0;
       // sprintf(txdataIot, "AT+WSOCR=0,hstec.kr,%d,1,1\r\n", gTcpPort);
       sprintf(txdataIot, "AT+WSOCR=0,chomh168.iptime.org,8124,1,1\r\n");
       my_puts_string(ToIot);
       sub_sqc = 1;
       wait_time = 1;
+      waitCount = 0;
       break;
     case 1:
-      sprintf(txdataIot, "AT+WSOCO=0\r\n"); // wait cmd
-      // if (SendTestPkt && openErrorCount == 0)
+      // if (SendTestPkt && waitCount == 0) 
+      if (waitCount == 0) {
+        sprintf(txdataIot, "AT+WSOCO=0\r\n"); // wait cmd
         my_puts_string(ToIot);
-      // else sub_sqc = 22;
-      // if (iotState & bv(WSOCOPEN_STIOT)) {
-        // cbi(iotState, WSOCOPEN_STIOT);
+      }
+      else sub_sqc = 22;
+      if (iotState & bv(WSOCOPEN_STIOT)) {
+        cbi(iotState, WSOCOPEN_STIOT);
         sub_sqc = 21;
-        // openErrorCount = 0;
-        printf("OPEN OK");
-      // }
-      // else {
-      //   openErrorCount++;
-      //   if(openErrorCount > 5) {
-      //     openErrorCount = 0;
-      //     sub_sqc = 3;
-      //   }
-      // }
-      wait_time = 1;
+        waitCount = 0;
+      }
+      else {
+        waitCount++;
+        if(waitCount > 5) {
+          waitCount = 0;
+          sub_sqc = 3;
+        }
+      }
+      wait_time = 0;
       break;
     case 2:
       // toss 	
@@ -1366,26 +1409,26 @@ ui16 msg_send_2_iot_LTE(void) {
       sub_sqc = 3;
       break;
     case 21: // test pak
-      make_iot_paket_4_iot(1);
-      printf("count = %d %d", totalPacketCount, nowCount);
-      // if (totalPacketCount == nowCount && (iotState & bv(WSOWRITE_STIOT))){
-        // nowCount = 0;
+      // printf("pac %d %d", totalPacketCount, nowCount);
+      if (totalPacketCount == nowCount && (iotState & bv(WSOWRITE_STIOT))){
+        nowCount = 0;
         sub_sqc = 3;
         SendTestPkt = 0;
-        // cbi(iotState, WSOWRITE_STIOT);
-      // }
-      // else if(totalPacketCount > nowCount){
-        // makeIotPacketLTE();
+        waitCount = 0;
+        cbi(iotState, WSOWRITE_STIOT);
+      }
+      else if(totalPacketCount > nowCount){
+        makeIotPacketLTE();
         my_puts_string(ToIot);
-        // nowCount++;
-      // }
-      // else {
-      //   openErrorCount++;
-      //   if(openErrorCount == 5) {
-      //     openErrorCount = 0;
-      //     sub_sqc = 3;
-      //   }
-      // }
+        nowCount++;
+      }
+      else {
+        waitCount++;
+        if(waitCount == 5) {
+          waitCount = 0;
+          sub_sqc = 3;
+        }
+      }
       wait_time = 0;
       break;
     case 22:
@@ -1394,21 +1437,45 @@ ui16 msg_send_2_iot_LTE(void) {
       sub_sqc = 3;
       break;
     case 3:
-      printf("CLOSE");
-      sprintf(txdataIot, "AT+WSOCL=0\r\n"); // wait cmd
-      my_puts_string(ToIot);
-      cbi(iotSendSw, TCPSENDDATA_ICF);
-      wait_time = 0;
-      sub_sqc = 0;
+      if(waitCount == 0){
+        sprintf(txdataIot, "AT+WSOCL=0\r\n"); // wait cmd
+        my_puts_string(ToIot);
+      }
+      
+      // wait_time = 0;
+      
       if (inv_num > 20) inv_num = 1;
-      if (recvError) {
-        failCount++;
-        if(failCount < 3){
-          triggerServer(makeSendBodyPacket());
-        }
-        else{
-          failCount = 0;
-          recvError = false;
+      // if (recvError) {
+      //   failCount++;
+      //   if(failCount < 3){
+      //     triggerServer(makeSendBodyPacket());
+      //   }
+      //   else{
+      //     failCount = 0;
+      //     recvError = false;
+      //   }
+      //   sub_sqc = 0;
+      // }
+      printf("%d", (iotState & bv(WSOREAD_STIOT)));
+      if (iotState & bv(WSOREAD_STIOT)){
+        printf("FINISH");
+        cbi(iotState, WSOREAD_STIOT);
+        cbi(iotSendSw, TCPSENDDATA_ICF);
+        sub_sqc = 0;
+      }
+      else {
+        waitCount++;
+        if(waitCount == 5) {
+          waitCount = 0;
+          failCount++;
+          if(failCount < 3){
+            triggerServer(makeSendBodyPacket());
+            sub_sqc = 0;
+          }
+          else{
+            failCount = 0;
+            recvError = false;
+          }
         }
       }
       break;
@@ -1419,23 +1486,23 @@ ui16 msg_send_2_iot_LTE(void) {
     return wait_time; //cmd 
   }
   if (iotSendSw & bv(NEWMSGCHECK_ICF)) {
-    switch (sub_sqc) {
-    case 0:
-      // sprintf(txdataIot, "AT*SKT*NEWMSG=4098\r\n");
-      // my_puts_string(ToIot);
-      sub_sqc++;
-      wait_time = 1;
-      break;
-    case 1:
-      // sprintf(txdataIot, "AT*SKT*MTACK=4098\r\n");
-      // my_puts_string(ToIot);
-      sub_sqc = 100;
-      cbi(iotSendSw, NEWMSGCHECK_ICF);
-      wait_time = 0;
-    default:
-      sub_sqc = 0;
-      break;
-    }
+    // switch (sub_sqc) {
+    // case 0:
+    //   // sprintf(txdataIot, "AT*SKT*NEWMSG=4098\r\n");
+    //   // my_puts_string(ToIot);
+    //   sub_sqc++;
+    //   wait_time = 1;
+    //   break;
+    // case 1:
+    //   // sprintf(txdataIot, "AT*SKT*MTACK=4098\r\n");
+    //   // my_puts_string(ToIot);
+    //   sub_sqc = 100;
+    //   cbi(iotSendSw, NEWMSGCHECK_ICF);
+    //   wait_time = 0;
+    // default:
+    //   sub_sqc = 0;
+    //   break;
+    // }
     return wait_time;
   }
 
@@ -1509,21 +1576,34 @@ void drv_sendTcpControlLTE(void) {
     dsDelay = 3;
     sSqcILte_uri = 4;
     break;
-  case 4: // STATE 
-    sprintf(txdataIot, "AT+CSQ\r\n");
-    my_puts_string(ToIot);
-    cbi(iotState, DNSQUERY_STIOT);
-    dsDelay = 3;
-    sSqcILte_uri = 5;
-    break;
-  case 5:
+  case 4:
     sprintf(txdataIot, "AT+CCLK?\r\n");
     cbi(iotState, TIMECHECK_STIOT);
     my_puts_string(ToIot);
     dsDelay = 3;
+    sSqcILte_uri = 5;
+    break;
+  case 5: // STATE 
+    sprintf(txdataIot, "AT+CSQ\r\n");
+    my_puts_string(ToIot);
+    cbi(iotState, DNSQUERY_STIOT);
+    dsDelay = 3;
     sSqcILte_uri = 6;
     break;
   case 6: // cnmi 
+    //sprintf(txdataIot,"AT*SKT*NEWMSG=4098\r\n");  // msg set 
+    sprintf(txdataIot, "AT+CNMI=1,2,0,0,0\r\n");
+    my_puts_string(ToIot);
+    dsDelay = 3;
+    sSqcILte_uri = 7;
+    break;
+  case 7: // cmgf 
+    sprintf(txdataIot, "AT+CMGF=1\r\n"); // msg mode set 
+    my_puts_string(ToIot);
+    dsDelay = 3;
+    sSqcILte_uri = 8;
+    break;
+  case 8: // cnmi 
     //sprintf(txdataIot,"AT*SKT*NEWMSG=4098\r\n");  // msg set 
     dsDelay = 10;
     if (gImd_reaction) {
@@ -1532,11 +1612,11 @@ void drv_sendTcpControlLTE(void) {
     }
     if (msg_send_2_iot_LTE()) break;
     if (gDbgFuseCnt < 5) gDbgFuseCnt = 5;
-    sSqcILte_uri = 7;
+    sSqcILte_uri = 9;
     break;
-  case 7: // cmgf 
+  case 9: // cmgf 
     // if (iotSendSw)
-      sSqcILte_uri = 6;
+      sSqcILte_uri = 8;
     break;
   default:
     sSqcILte_uri = 0;

@@ -26,6 +26,7 @@ enum STATE_IOT_MODUAL{
       ,WSOCOPEN_STIOT
       ,APP_READY
       ,WSOWRITE_STIOT
+      ,WSOREAD_STIOT
       };
 
 
@@ -37,7 +38,7 @@ extern unsigned char swUsart4dbgshow;
 extern int gSysCnt;
 extern char SendTestPkt;
 extern unsigned char iotSendSw;
-extern unsigned char iotState;
+extern unsigned short iotState;
 extern char gMode_232;
 extern ui16 gDbgFuseCnt;
 extern char gImd_reaction;

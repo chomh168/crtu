@@ -58,6 +58,7 @@ void check_delay_inv(void);
 void set_send_inv_packet(void);
 void recv_inv_raw_packet(void);
 void send_iot_count(void);
+void setTriggerSever(void);
 
 //-----------------------------------------------------
 
@@ -81,7 +82,7 @@ void gpio_callback(uint gpio, uint32_t events){
 
  char iotSendSw=0;
  char SendTestPkt=0;
- char iotState=0;
+ short iotState=0;
  char gMode_232=0;
  char gImd_reaction=0;
  char gIotDev = 0 ;
@@ -164,6 +165,7 @@ char serverCharBody[1024] = {0};
 map<short,vector<char>> serverBody;
 map<short,int> modelSerializeLength;
 char serverHeader[20] = {0};
+bool trigger = false;
  
 int main() {
 #ifndef PICO_DEFAULT_LED_PIN
@@ -207,6 +209,7 @@ int main() {
 	//uart_puts(UART_ID_0, " Hello, UART!\n");
 	gpio_init(HW_WATCHDOG);
 	gpio_set_dir(HW_WATCHDOG, GPIO_OUT);
+	watchdog_enable(10000, 1);
 
    while (true) {
         //---------- 1ms tic --call back int.---------------- 
@@ -223,6 +226,7 @@ int main() {
 		 //------------------------------------------
 	   showHL();
 	//    drv_temp_check();	
+	watchdog_update();
 //-----------------------------
       
 
@@ -268,6 +272,14 @@ int makeSendBodyPacket(){
 			body.insert(body.end(), serialPacket, serialPacket + pair.second->getSerializeLength());
 			serverBody[pair.second->getModel()] = body;
 		}
+		else{
+			auto body = serverBody[-1];
+			unsigned char errorInvno[2] = {0,};
+			errorInvno[0] = pair.second->invno / 0x100;
+			errorInvno[1] = pair.second->invno % 0x100;
+			body.insert(body.end(), errorInvno, errorInvno + 2);
+			serverBody[-1] = body;
+		}
     }
 	return serverBody.size();
 }
@@ -278,11 +290,11 @@ void setCharArrayByInt(char* arr, int value, int byte) {
     }
 }
 
-void makeSendHeaderPacket(int bodyLength, int model, int moduleCount){
+void makeSendHeaderPacket(int bodyLength, int type, int model, int moduleCount){
 	int id = 1;
 	setCharArrayByInt(&serverHeader[0], id, 4);
 	setCharArrayByInt(&serverHeader[4], bodyLength, 4);
-	setCharArrayByInt(&serverHeader[8], 1, 2); //packet Type - 1: inverter
+	setCharArrayByInt(&serverHeader[8], type, 2); //packet Type - 1: inverter
 	setCharArrayByInt(&serverHeader[10], model, 2);
 	setCharArrayByInt(&serverHeader[12], moduleCount, 2);
 }
@@ -290,14 +302,21 @@ void makeSendHeaderPacket(int bodyLength, int model, int moduleCount){
 int getCurrentBodyPacket(){
 	int packetSize = 0;
 	auto bodyIt = serverBody.begin();
-	if (bodyIt->second.size() == 0) {
+	if (bodyIt->second.empty()) {
 		bodyIt = next(bodyIt);
 	}
 	if (bodyIt == serverBody.end()) {
 		bodyIt = serverBody.begin();
 		return packetSize;
 	}
-	makeSendHeaderPacket(bodyIt->second.size(), bodyIt->first, bodyIt->second.size()/modelSerializeLength[bodyIt->first]);
+	
+	if(bodyIt->first == -1){
+		makeSendHeaderPacket(bodyIt->second.size(), CLIENT_ERROR, bodyIt->first, bodyIt->second.size()/modelSerializeLength[bodyIt->first]);
+	}
+	else{
+		makeSendHeaderPacket(bodyIt->second.size(), CLIENT_INVERTER, bodyIt->first, bodyIt->second.size()/modelSerializeLength[bodyIt->first]);
+	}
+	
 	bodyIt->second.insert(bodyIt->second.begin(), serverHeader, serverHeader+14);
 	packetSize = bodyIt->second.size();
 	memcpy(serverCharBody, bodyIt->second.data(), bodyIt->second.size());
@@ -307,25 +326,29 @@ int getCurrentBodyPacket(){
 
 void send_iot_count(){
 	static int sendServerDelay = 0;
-	static int delayCount = 0;
+	static int sendCount = 0;
 	static bool firstSend = true;
-	bool trigger = false;
+	
 	if((gSysCnt - sendServerDelay) < 1000) return;
 	sendServerDelay = gSysCnt;
-	delayCount++;
-	if(delayCount > 60 && firstSend){
+	sendCount++;
+	if(sendCount > 60 && firstSend){
 		firstSend = false;
 		trigger = true;
 	}
-	if(delayCount > 60 * 5) {
+	if(sendCount > 60 * 5) {
 		trigger = true;
 	}
 
 	if(trigger){
 		triggerServer(makeSendBodyPacket());
-		delayCount = 0;
+		sendCount = 0;
 		trigger = false;
 	}
+}
+
+void set_trigger(){
+	trigger = true;
 }
 
 void recv_inv_raw_packet(){
@@ -1475,8 +1498,8 @@ void rs_rece_uart0_iot(void) {
             receive_timeout = gSysCnt;
             if (sCntuCnt == 0) {
                 sCntuCnt = 200;
-                sprintf(cmdbuf, "<1:");
-                my_nputs_string(ToDbg, cmdbuf, 3);
+                // sprintf(cmdbuf, "<1:");
+                // my_nputs_string(ToDbg, cmdbuf, 3);
             }
 
             switch (data) {
