@@ -157,7 +157,6 @@ int load_eep (ui16 * oaddr){
 	return val; 
 }
 
-
 int save_eep_page (void){
 	ui16 temp;
 	unsigned char data[2048] = {0};
@@ -192,7 +191,9 @@ int save_eep_page (void){
 		{
 		data[i+2] = uEepv.addb[i];
 		i++;
-		if(i > 20)break;
+		// if(i > 20)break;
+		if(i > 224)break;
+		// if(i > 64)break;
 		}
 	//temp = i2c_write_blocking(DOT_DEFAULT_I2C,  addr_24c_high, arr, 4, false) ;
 	//i2c_write_blocking(i2c_default,  addr_24c_high, &arr[1], 1, true) ;
@@ -202,8 +203,19 @@ int save_eep_page (void){
 	// write val 
 	//i2c_write_blocking(DOT_DEFAULT_I2C,  addr_24c_high, &data[0], 2, true) ;
 	
-	err_code = i2c_write_blocking(DOT_DEFAULT_I2C, addr_24c_high, data , 64, false);
-//	printf("%d,[%x],%d,[%x]\r\n",m_add,err_code,uEepv.addi[numberOfsaveVal],uEepv.addi[numberOfsaveVal]);
+	// err_code = i2c_write_blocking(DOT_DEFAULT_I2C, addr_24c_high, data , 64, false);// 66 / 64 + 80
+
+	int offset = 0;
+	int length = 226;
+	int page = 64;
+    while (offset < 226) {
+		int chunk_length = (length - offset) < page ? (length - offset) : page;
+		err_code = i2c_write_blocking(DOT_DEFAULT_I2C, addr_24c_high, data + offset, chunk_length, false);
+		// sleep_ms(5);
+		offset += chunk_length;
+		printf("offset - %d\n", offset);
+	}
+	// printf("%d,[%x],%d,[%x]\r\n",m_add,err_code,uEepv.addi[numberOfsaveVal],uEepv.addi[numberOfsaveVal]);
 	return err_code;
 }
 
@@ -226,15 +238,27 @@ int load_eep_page (void){
 	//printf("%s",arr);
 	// write val 
 	i2c_write_blocking(DOT_DEFAULT_I2C, addr_24c_high, data , 2, true);
-	err_code = i2c_read_blocking(DOT_DEFAULT_I2C, addr_24c_high, &data[2] , 62, false);
+	// err_code = i2c_read_blocking(DOT_DEFAULT_I2C, addr_24c_high, &data[2] , 224, false);// 64 
+	int offset = 0;
+	int length = 224;
+	int page = 64;
+    while (offset < 224) {
+		int chunk_length = (length - offset) < page ? (length - offset) : page;
+		err_code = i2c_read_blocking(DOT_DEFAULT_I2C, addr_24c_high, data + 2 + offset, chunk_length, false);
+		sleep_ms(10);
+		offset += chunk_length;
+		printf("offset - %d\n", offset);
+	}
 //	printf("%d,[%x],%d,[%x]\r\n",m_add,err_code,uEepv.addi[numberOfsaveVal],uEepv.addi[numberOfsaveVal]);
 	
 	while (1)
-		{
+	{
 		uEepv.addb[i]  = data[i+2] ;
 		i++;
-		if(i > 20)break;
-		}
+		// if(i > 20)break;
+		if(i > 224)break;
+		// if(i > 64)break;
+	}
 
 	ee.PortNumber =    uEepv.su.eePortNumber ;	 
 	ee.SendDelay =	  uEepv.su.eeSendDelay ; 
@@ -250,8 +274,8 @@ int load_eep_page (void){
 	ee.P_BPS_485 =	 (char)uEepv.su.EEP_BPS_485 	; 
   	devInfo.devNum_485comm = (int)uEepv.su.eeDevNum_485comm;
   	for(int i = 0 ; i < 20 ; i++){
-		ee.eeModelInverters[i] = uEepv.su.eeModelInverters[i];
-		ee.eeModelInverterIds[i] = uEepv.su.eeModelInverterIds[i];
+		ee.eeModelInverters[i] = (short)uEepv.su.eeModelInverters[i];
+		ee.eeModelInverterIds[i] = (char)uEepv.su.eeModelInverterIds[i];
 	}
 	return err_code;
 }

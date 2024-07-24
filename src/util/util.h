@@ -12,6 +12,8 @@ bool checkCRC(unsigned char recvCRC[], unsigned int calcCRC);
 short ucharToShort(unsigned char* recvBuffer, bool reverse=false);
 unsigned int ucharToUint(unsigned char* recvBuffer, bool reverse=false);
 void shortToUcharArray(short value, unsigned char* array, short offset = 0);
+void setCharArrayByInt(char* arr, int value, int byte);
+int charsToInt(char tens, char ones);
 vector<string> split(const char* str, char delimiter);
 
 #endif /* UTIL_H_ */

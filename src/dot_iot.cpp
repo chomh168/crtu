@@ -51,7 +51,7 @@ char* frompccmd_str_m2m[MAX_NUM_FROMPCCMD] = {
   "$load", //  24
   "sev", //  25
   "$ivmode", // 26
-  "$lcdrst", // 27
+  "lcdrst", // 27
   "reset run_boot ", // 28
   "$fi", //29
   "$srst", //30 
@@ -62,7 +62,7 @@ char* frompccmd_str_m2m[MAX_NUM_FROMPCCMD] = {
   "+WSOWR:", //35
   "+WSORD=", //36
   "+CMT:", //37
-  "$setRTU:", //38
+  "setRTU:", //38
   "Reset", //39
   "help" //MAX_NUM_FROMPCCMD - 1
 };
@@ -144,18 +144,6 @@ void gp_ini_h(const uint PINNUM, bool in_out) {
 
 void my_putc(uart_inst_t* uart, char val) {
   uart_putc(uart, val);
-}
-
-int charsToInt(char tens, char ones) {
-  if (isdigit(tens) && isdigit(ones)) {
-    int tensDigit = tens - '0';
-    int onesDigit = ones - '0';
-
-    return tensDigit * 0x10 + onesDigit;
-  } else {
-    printf("Error: Non-digit character input");
-    return -1;
-  }
 }
 
 unsigned char Cmd_judge(char* dest) {
@@ -289,7 +277,7 @@ unsigned char Cmd_judge(char* dest) {
     break;
   case 12:
     strncpy(cmd_buf, subval_addr, 30);
-    if(strstr(cmd_buf, "OPEN_CMPL") != nullptr){ //  || (cmd_buf[0] == '1' && cmd_buf[2] == 'O')
+    if(strstr(cmd_buf, "OPEN_CMPL") != nullptr){ 
       sbi(iotState, WSOCOPEN_STIOT);
       bRxOk = 1;
     }
@@ -393,6 +381,21 @@ unsigned char Cmd_judge(char* dest) {
     my_puts_string(dbgSndPort);
     break;
   case 27:
+    // load_eep_page();
+    printf("ps id : %d /", ee.PortNumber);
+    printf("ps inv count : %d /", ee.InverterCount);
+    printf("ps model : %d /", ee.ModelInverter);
+    printf("ps IP : %d.%d.%d.%d /", ee.IpAddress[0],ee.IpAddress[1],ee.IpAddress[2],ee.IpAddress[3]);
+    printf("ps models : ");
+    for(int i = 0 ; i < 20 ; i++){
+       printf("%02d ", ee.eeModelInverters[i]);
+    }
+    printf("\n");
+    printf("ps model ids : ");
+    for(int i = 0 ; i < 20 ; i++){
+       printf("%02d ", ee.eeModelInverterIds[i]);
+    }
+    printf("\n");
     // gFlcdIni = 1;
     break;
   case 28:
@@ -444,31 +447,45 @@ unsigned char Cmd_judge(char* dest) {
     break;
   case 36: //SERVER
     strncpy(cmd_buf, subval_addr, 100);
-    serverCode = charsToInt(cmd_buf[8], cmd_buf[9]);
+    serverCode = charsToInt(cmd_buf[9], cmd_buf[10]);
     if (serverCode == SERVER_ACK) {//SERVER_ACK
       sbi(iotState, WSOREAD_STIOT); // count
       printf("server ACK %d\r\n", (iotState & bv(WSOREAD_STIOT)));
     } 
-    if (serverCode == SERVER_RESET) {
+    else if (serverCode == SERVER_RESET) {
       sbi(gResetSw, SYSTEM_RSW);
       printf("now sys reboot....\r\n");
     }
-    printf("rec : %s, %c",cmd_buf, cmd_buf[9]);
-    break;
-  // case 37: //SMS
-  // //   strncpy(cmd_buf, subval_addr, 200);
-  // //   printf("msg : %s", cmd_buf);
-  //   break;
-  case 38:
-    strncpy(cmd_buf, subval_addr, 200);
-    strSplit = split(cmd_buf,'/');
-    ee.PortNumber = stoi(strSplit[0]);
-    for(int i = 0; i < strSplit.size()/2 ; i++){
-      ee.PortNumber = stoi(strSplit[1 + i*2]);
-      ee.PortNumber = stoi(strSplit[2 + i*2]);
+    else{
+      printf("unknown case\r\n");
     }
-    save_eep_page();
-    sbi(gResetSw, SYSTEM_RSW);
+    printf("rec : %s, %d",cmd_buf, serverCode);
+    break;
+  case 37: //SMS
+    // strncpy(cmd_buf, subval_addr, 200);
+    // if(strstr(cmd_buf,"lcdrst") != nullptr){
+    //   printf("msg : ");
+    // }
+    break;
+  case 38:
+    strncpy(cmd_buf, subval_addr, 80);
+    strSplit = split(cmd_buf,',');
+    ee.PortNumber = stoi(strSplit[0]);
+    ee.InverterCount = strSplit.size()/2;
+    for(int i = 0; i < strSplit.size()/2 ; i++){
+      ee.eeModelInverters[i] = stoi(strSplit[1 + i*2]);
+      ee.eeModelInverterIds[i] = stoi(strSplit[2 + i*2]);
+    }
+    ee.IpAddress[0] = 192;
+    ee.IpAddress[1] = 168;
+    ee.IpAddress[2] = 0;
+    ee.IpAddress[3] = 25;
+    ee.ModelInverter = 5;
+    // save_eep_page();
+    gdataSaveFlag = 1;
+    printf("a1 - %d ", uEepv.su.eeModelInverters[0]);
+    printf("a2 - %d \n", uEepv.su.eeModelInverterIds[0]);
+    // sbi(gResetSw, SYSTEM_RSW);
     break;
   case 39:
     sbi(gResetSw, SYSTEM_RSW);
@@ -1320,7 +1337,7 @@ void drv_sendTcpControlM2M(void) {
 
 }
 
-ui16 msg_send_2_iot_LTE(void) {
+ui16 msg_send_2_iot_LTE(bool& init) {
   static ui16 wait_time = 0;
   static unsigned char sub_sqc = 0;
   static char* addr_p;
@@ -1328,6 +1345,7 @@ ui16 msg_send_2_iot_LTE(void) {
   static char inv_num = 1;
   // static int nowCount = 0;
   static int failCount = 0;
+  static int resetCount = 0;
   static int waitCount = 0;
 
   if (iotSendSw & bv(CLOCK_ICF)) {
@@ -1396,20 +1414,9 @@ ui16 msg_send_2_iot_LTE(void) {
       wait_time = 0;
       break;
     case 2:
-      // toss 	
-      //              sprintf(txdataIot,"AT+WSOWR=0,%d,",recv_length_232);
-      //              my_puts_string (ToIot);
-
-      //              sendlength =  recv_length_232;
-      //              addr_p = rxdata_frm_ras;
-      //              while(sendlength){
-      //                 DEC(sendlength);
-      //                 putchar1 (*addr_p++); 
-      //              }
       sub_sqc = 3;
       break;
     case 21: // test pak
-      // printf("pac %d %d", totalPacketCount, nowCount);
       if (totalPacketCount == nowCount && (iotState & bv(WSOWRITE_STIOT))){
         nowCount = 0;
         sub_sqc = 3;
@@ -1441,27 +1448,14 @@ ui16 msg_send_2_iot_LTE(void) {
         sprintf(txdataIot, "AT+WSOCL=0\r\n"); // wait cmd
         my_puts_string(ToIot);
       }
-      
-      // wait_time = 0;
-      
-      if (inv_num > 20) inv_num = 1;
-      // if (recvError) {
-      //   failCount++;
-      //   if(failCount < 3){
-      //     triggerServer(makeSendBodyPacket());
-      //   }
-      //   else{
-      //     failCount = 0;
-      //     recvError = false;
-      //   }
-      //   sub_sqc = 0;
-      // }
-      printf("%d", (iotState & bv(WSOREAD_STIOT)));
+
       if (iotState & bv(WSOREAD_STIOT)){
         printf("FINISH");
         cbi(iotState, WSOREAD_STIOT);
         cbi(iotSendSw, TCPSENDDATA_ICF);
         sub_sqc = 0;
+        failCount = 0;
+        resetCount = 0;
       }
       else {
         waitCount++;
@@ -1475,6 +1469,14 @@ ui16 msg_send_2_iot_LTE(void) {
           else{
             failCount = 0;
             recvError = false;
+            resetCount++;
+            if((resetCount % 3) == 0){
+              init = true;
+              if(resetCount == 6){
+                printf("now sys reboot....\r\n");
+                sbi(gResetSw, SYSTEM_RSW);
+              }
+            }
           }
         }
       }
@@ -1524,6 +1526,7 @@ void drv_sendTcpControlLTE(void) {
   static char sSqcILte_uri = 0;
   static int bootCnt = 0;
   static ui16 giotSetOnCnt;
+  bool init = false;
 
   if ((gSysCnt - drvTimerTcpCtrl) < 1000) return; // 1s tic 
   drvTimerTcpCtrl = gSysCnt;
@@ -1604,19 +1607,23 @@ void drv_sendTcpControlLTE(void) {
     sSqcILte_uri = 8;
     break;
   case 8: // cnmi 
-    //sprintf(txdataIot,"AT*SKT*NEWMSG=4098\r\n");  // msg set 
     dsDelay = 10;
     if (gImd_reaction) {
       gImd_reaction = 0;
       dsDelay = 1;
     }
-    if (msg_send_2_iot_LTE()) break;
+    if (msg_send_2_iot_LTE(init)) break;
     if (gDbgFuseCnt < 5) gDbgFuseCnt = 5;
     sSqcILte_uri = 9;
     break;
   case 9: // cmgf 
     // if (iotSendSw)
-      sSqcILte_uri = 8;
+      if(init == true){
+        init = false;
+        sSqcILte_uri = 0;
+      }
+      else
+        sSqcILte_uri = 8;
     break;
   default:
     sSqcILte_uri = 0;

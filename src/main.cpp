@@ -7,6 +7,7 @@
 
 #include "hs_global.h"
 #include "test.h"
+#include "util/util.h"
 // #include "0.inverter_base.h"
 // #include "1.Growatt.h"
 #include "inverter.h"
@@ -59,6 +60,7 @@ void set_send_inv_packet(void);
 void recv_inv_raw_packet(void);
 void send_iot_count(void);
 void setTriggerSever(void);
+void print_display(void);
 
 //-----------------------------------------------------
 
@@ -166,6 +168,9 @@ map<short,vector<char>> serverBody;
 map<short,int> modelSerializeLength;
 char serverHeader[20] = {0};
 bool trigger = false;
+extern see ee;
+bool vibCheck = false;
+extern char datetime[30];
  
 int main() {
 #ifndef PICO_DEFAULT_LED_PIN
@@ -183,7 +188,6 @@ int main() {
 	alarm_in_us(1000000 * 2);
 	gflcdsleep_n = 1000;
 	uart_ini_rx_int();
-	init_inverter();
 
 //----------------ini-------------------------------------	
 	//const uint i2c_default = i2c1_inst ;
@@ -202,6 +206,8 @@ int main() {
 	adc_ini_crtu();
 	load_eep_page();
 	cdcd_init();
+
+	init_inverter();
 	
 	itrt_cnt = 0;
 	gpio_set_irq_enabled_with_callback(22, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
@@ -210,6 +216,7 @@ int main() {
 	gpio_init(HW_WATCHDOG);
 	gpio_set_dir(HW_WATCHDOG, GPIO_OUT);
 	watchdog_enable(10000, 1);
+	printf("start");
 
    while (true) {
         //---------- 1ms tic --call back int.---------------- 
@@ -261,34 +268,46 @@ int main() {
 		opr_send485tx();
 		recv_inv_raw_packet();
 		send_iot_count();
+		print_display();
     }
 }
 
+void print_display(){
+	static int displayDelay = 0;
+	static int phase = 0;
+	
+	if((gSysCnt - displayDelay) < 5000) return; // || vibCheck == false
+	// if((gSysCnt - displayDelay) >= 5000 || vibCheck){
+		displayDelay = gSysCnt;
+
+		// Paint_DrawString_EN(50, 10, "TEST", &Font12, 0x1, 0xb);
+		// Paint_DrawString_EN(10, 10, datetime, &Font12, 0x1, 0xb);
+	// }
+
+}
+
 int makeSendBodyPacket(){
+	serverBody.clear();
 	for (const auto& pair : inverters) {
 		if(pair.second->getValid()){
 			unsigned char* serialPacket = pair.second->serialize();
 			auto body = serverBody[pair.second->getModel()];
 			body.insert(body.end(), serialPacket, serialPacket + pair.second->getSerializeLength());
 			serverBody[pair.second->getModel()] = body;
+			pair.second->setValid(false);
 		}
 		else{
-			auto body = serverBody[-1];
+			auto body = serverBody[pair.second->getModel() * -1];
 			unsigned char errorInvno[2] = {0,};
 			errorInvno[0] = pair.second->invno / 0x100;
 			errorInvno[1] = pair.second->invno % 0x100;
 			body.insert(body.end(), errorInvno, errorInvno + 2);
-			serverBody[-1] = body;
+			serverBody[pair.second->getModel() * -1] = body;
 		}
     }
 	return serverBody.size();
 }
 
-void setCharArrayByInt(char* arr, int value, int byte) {
-    for (int i = 0; i < byte; ++i) {
-        arr[i] = (value >> (8 * (byte - 1 - i))) & 0xFF;
-    }
-}
 
 void makeSendHeaderPacket(int bodyLength, int type, int model, int moduleCount){
 	int id = 1;
@@ -310,8 +329,8 @@ int getCurrentBodyPacket(){
 		return packetSize;
 	}
 	
-	if(bodyIt->first == -1){
-		makeSendHeaderPacket(bodyIt->second.size(), CLIENT_ERROR, bodyIt->first, bodyIt->second.size()/modelSerializeLength[bodyIt->first]);
+	if(bodyIt->first < 0){
+		makeSendHeaderPacket(bodyIt->second.size(), CLIENT_ERROR, bodyIt->first * -1, bodyIt->second.size() / 2);
 	}
 	else{
 		makeSendHeaderPacket(bodyIt->second.size(), CLIENT_INVERTER, bodyIt->first, bodyIt->second.size()/modelSerializeLength[bodyIt->first]);
@@ -330,6 +349,7 @@ void send_iot_count(){
 	static bool firstSend = true;
 	
 	if((gSysCnt - sendServerDelay) < 1000) return;
+	gfLcdRefash = 1;
 	sendServerDelay = gSysCnt;
 	sendCount++;
 	if(sendCount > 60 && firstSend){
@@ -367,6 +387,7 @@ void recv_inv_raw_packet(){
 					nowInverter->decodePacket(invBuffer, sendPacketCount);
 					nowInverter->setRecvOk(true);
 					nowInverter->setValid(true);
+					//rx display
 				}
 				isValid = false;
 			}
@@ -415,6 +436,7 @@ void set_send_inv_packet(){
 		txdataInv[0] = length;
 		copy(sendPacket, sendPacket + length, txdataInv + 1);
 		sendReactionTriger = 1;
+		// tx display
 
 		invResponseDelay = gSysCnt; 
 		isInvResponseDelay = false;
@@ -434,6 +456,7 @@ void init_inverter(){
 	inverters[501] = new InverterGrowatt(1);
 	inverters[501]->clearValue(true);
 	nowInverter = inverters[501];
+	nowInverter->setValid(false);
 	modelSerializeLength[nowInverter->getModel()] = nowInverter->getSerializeLength();
 	uart_init(UART_ID_1, nowInverter->getBaudRate());
 	preBuadRate = nowInverter->getBaudRate();
@@ -490,6 +513,7 @@ void vib_check(void){
 		itrt_cnt = 0;
 		printf("vib!!");
 		gflcdsleep_n = 3000;
+		vibCheck = true;
 	}	
 
 };
@@ -503,11 +527,17 @@ void black_out_check(void){
 
 	switch(sqc_boc){
 		case 0:
-			if(gfBlackOut == 1) sqc_boc++;
+			if(gfBlackOut == 1) {
+				set_trigger();
+				sqc_boc++;
+			}
 		break;	
 		case 1:
 			// DEC(gflcdsleep_n);
-			if(gfBlackOut == 0) sqc_boc++;
+			if(gfBlackOut == 0) {
+				set_trigger();
+				sqc_boc++;
+			}
 		break;	
 		case 2:  
 			// go lcd sleep 

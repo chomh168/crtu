@@ -50,6 +50,7 @@ extern void gpio_hs (const uint gpNum, char onoff );
 extern void OLED_1in5_Display(UBYTE *Image);
 void drv_lcd_1in5_oled(void);
 void flcd_refrash(void);
+extern char datetime[30];
 
 
 
@@ -282,7 +283,8 @@ extern void drv_lcd_1in5_oled(void){
 	static int cnt =0;
 	static UBYTE *BlackImage;
 	static UWORD Imagesize = ((OLED_1in5_WIDTH%2==0)? (OLED_1in5_WIDTH/2): (OLED_1in5_WIDTH/2+1)) * OLED_1in5_HEIGHT;
-	
+	static double count = 1;
+
 	switch(sDlSqc){
 		case 0:  // wait Sys stable
 			if((gSysCnt - cnt) < 1500) break;
@@ -376,10 +378,13 @@ extern void drv_lcd_1in5_oled(void){
 			if((gSysCnt - cnt) < 2000) break;
 			Paint_Clear(BLACK);
 			
-			Paint_DrawString_EN(10, 80, "i_love_U", &Font12, 0x1, 0xb);
-			Paint_DrawString_EN(10, 92, "soul_energy", &Font16, 0x2, 0xc);
-			Paint_DrawNum(10, 100, 123.456789, &Font8, 4, 0x3, 0xd);
-			Paint_DrawNum(10, 116, 987654, &Font12, 5, 0x4, 0xe);
+			// Paint_DrawString_EN(10, 80, "i_love_U", &Font12, 0x1, 0xb);
+			// Paint_DrawString_EN(10, 92, "soul_energy", &Font16, 0x2, 0xc);
+			// Paint_DrawNum(10, 100, 123.456789, &Font8, 4, 0x3, 0xd);
+			// Paint_DrawNum(10, 116, 987654, &Font12, 5, 0x4, 0xe);
+			Paint_DrawNum(30, 70, count++, &Font12, 5, 0x4, 0xe);
+			Paint_DrawString_EN(50, 10, datetime, &Font12, 0, 0x1);
+			Paint_DrawString_EN(10, 10, "TEST", &Font12, 0x1, 0xb);
 	
 			// Show image on page2
 			OLED_1in5_Display_test(BlackImage);
@@ -398,6 +403,7 @@ extern void drv_lcd_1in5_oled(void){
 			break;
 		case 11:
 			gfLcdRefash = 0;
+			Paint_DrawNum(30, 70, count++, &Font12, 5, 0x4, 0xe);
 			flcd_refrash();
 			sDlSqc = 10; 
 			break;

@@ -78,6 +78,25 @@ void shortToUcharArray(short value, unsigned char* array, short offset) {
     array[offset + 1] = static_cast<unsigned char>(value & 0xFF); // 하위 바이트
 }
 
+
+void setCharArrayByInt(char* arr, int value, int byte) {
+    for (int i = 0; i < byte; ++i) {
+        arr[i] = (value >> (8 * (byte - 1 - i))) & 0xFF;
+    }
+}
+
+int charsToInt(char tens, char ones) {
+  if (isdigit(tens) && isdigit(ones)) {
+    int tensDigit = tens - '0';
+    int onesDigit = ones - '0';
+
+    return tensDigit * 0x10 + onesDigit;
+  } else {
+    printf("Error: Non-digit character input");
+    return -1;
+  }
+}
+
 vector<string> split(const char* str, char delimiter) {
     vector<string> result;
     const char* start = str;

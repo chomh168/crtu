@@ -223,8 +223,8 @@ typedef struct	{
 	char ModelInverter;
 	char P_MODE_232;
 	char P_BPS_485;
-	unsigned int eeModelInverters[20];
-	unsigned int eeModelInverterIds[20];
+	short eeModelInverters[20];
+	char eeModelInverterIds[20];
 }see; 
 
 typedef struct	{
