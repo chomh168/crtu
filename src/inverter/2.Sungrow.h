@@ -1,5 +1,5 @@
-#ifndef GROWATT_H_
-#define GROWATT_H_
+#ifndef SUNGROW_H_
+#define SUNGROW_H_
 
 #include "0.inverter_base.h"
 

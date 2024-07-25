@@ -263,8 +263,8 @@ int main() {
 		drv_adc_internal();
 		drv_eep_at24c128();
 		drv_lcd_1in5_oled();
-		check_delay_inv();
 		set_send_inv_packet();
+		check_delay_inv();
 		opr_send485tx();
 		recv_inv_raw_packet();
 		send_iot_count();
@@ -407,6 +407,14 @@ void recv_inv_raw_packet(){
 	}
 }
 
+void set_send_packet_txdataInv(){
+	unsigned char* sendPacket = nowInverter->getSendPacketList()[sendPacketCount];
+	int length = nowInverter->getPacketLength();
+	txdataInv[0] = length;
+	copy(sendPacket, sendPacket + length, txdataInv + 1);
+	sendReactionTriger = 1;
+}
+
 void check_delay_inv(){
 	static int delayCount = 0;
 
@@ -419,11 +427,12 @@ void check_delay_inv(){
 		delayCount = 0;
 	}
 	else {
-		unsigned char* sendPacket = nowInverter->getSendPacketList()[sendPacketCount];
-		int length = nowInverter->getPacketLength();
-		txdataInv[0] = length;
-		copy(sendPacket, sendPacket + length, txdataInv + 1);
-		sendReactionTriger = 1;
+		// unsigned char* sendPacket = nowInverter->getSendPacketList()[sendPacketCount];
+		// int length = nowInverter->getPacketLength();
+		// txdataInv[0] = length;
+		// copy(sendPacket, sendPacket + length, txdataInv + 1);
+		// sendReactionTriger = 1;
+		set_send_packet_txdataInv();
 	}
 }
 
@@ -431,11 +440,13 @@ void set_send_inv_packet(){
 	if((gSysCnt - invResponseDelay) < 1000) return;
 	if (nowInverter->getRecvOk() == true || isInvResponseDelay == true){
 		invResponseDelay = gSysCnt;
-		unsigned char* sendPacket = nowInverter->getSendPacketList()[sendPacketCount++];
-		int length = nowInverter->getPacketLength();
-		txdataInv[0] = length;
-		copy(sendPacket, sendPacket + length, txdataInv + 1);
-		sendReactionTriger = 1;
+		// unsigned char* sendPacket = nowInverter->getSendPacketList()[sendPacketCount++];
+		// int length = nowInverter->getPacketLength();
+		// txdataInv[0] = length;
+		// copy(sendPacket, sendPacket + length, txdataInv + 1);
+		// sendReactionTriger = 1;
+		set_send_packet_txdataInv();
+		sendPacketCount++;
 		// tx display
 
 		invResponseDelay = gSysCnt; 
@@ -453,17 +464,21 @@ void set_send_inv_packet(){
 }
 
 void init_inverter(){
-	inverters[501] = new InverterGrowatt(1);
-	inverters[501]->clearValue(true);
-	nowInverter = inverters[501];
-	nowInverter->setValid(false);
-	modelSerializeLength[nowInverter->getModel()] = nowInverter->getSerializeLength();
-	uart_init(UART_ID_1, nowInverter->getBaudRate());
-	preBuadRate = nowInverter->getBaudRate();
-	keyIndex = 0;
-	sendPacketCount = 0;
-	unsigned char* sendPacket = nowInverter->getSendPacketList()[sendPacketCount];
-	copy(sendPacket, sendPacket + sizeof(sendPacket)/sizeof(sendPacket[0]), txdataInv);
+	for(int i = 0 ; i < ee.InverterCount ; i++){
+		int key = ee.eeModelInverters[i] * 100 + ee.eeModelInverterIds[i];
+		inverters[key] = getInverterInstance(ee.eeModelInverters[i], ee.eeModelInverterIds[i]);
+		inverters[key]->clearValue(true);
+		inverters[key]->setValid(false);
+		modelSerializeLength[nowInverter->getModel()] = nowInverter->getSerializeLength();
+		if (i == 0){
+			nowInverter = inverters[key];
+			uart_init(UART_ID_1, nowInverter->getBaudRate());
+			preBuadRate = nowInverter->getBaudRate();
+			set_send_packet_txdataInv();
+		}
+	}
+	
+
 	for (const auto& pair : inverters) {
 		inverterKeys.push_back(pair.first);
     }

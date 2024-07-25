@@ -40,9 +40,9 @@ public:
 
     InverterBase(short invno);
 
-    virtual void decodePacket(unsigned char* recvBuffer, int sendPacketCount) = 0;
-    virtual unsigned char* serialize() = 0;
-    virtual void clearValue(bool totalReset) = 0;
+    virtual void decodePacket(unsigned char* recvBuffer, int sendPacketCount)=0;
+    virtual unsigned char* serialize()=0;
+    virtual void clearValue(bool totalReset)=0;
 
     bool isValidRecvPacket(unsigned char* recvBuffer, int length);
     unsigned char* makeModbusSendPacket(int func, int start, int count);

@@ -482,9 +482,7 @@ unsigned char Cmd_judge(char* dest) {
     ee.IpAddress[3] = 25;
     ee.ModelInverter = 5;
     save_eep_page();
-    printf("a1 - %d ", uEepv.su.eeModelInverters[0]);
-    printf("a2 - %d \n", uEepv.su.eeModelInverterIds[0]);
-    // sbi(gResetSw, SYSTEM_RSW);
+    sbi(gResetSw, SYSTEM_RSW);
     break;
   case 39:
     sbi(gResetSw, SYSTEM_RSW);
@@ -517,13 +515,6 @@ void triggerServer(int count){
   SendTestPkt = 1;
   nowCount = 0;
 }
-
-// void triggerServer(int count){
-//   totalPacketCount = count;
-//   sbi(iotSendSw, TCPSENDDATA_ICF);
-//   SendTestPkt = 1;
-// }
-
 
 unsigned char Cmd_judge_usb(char* dest) {
   char tcmd_code = 0;
