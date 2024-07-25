@@ -381,7 +381,7 @@ unsigned char Cmd_judge(char* dest) {
     my_puts_string(dbgSndPort);
     break;
   case 27:
-    // load_eep_page();
+    load_eep_page();
     printf("ps id : %d /", ee.PortNumber);
     printf("ps inv count : %d /", ee.InverterCount);
     printf("ps model : %d /", ee.ModelInverter);
@@ -481,8 +481,7 @@ unsigned char Cmd_judge(char* dest) {
     ee.IpAddress[2] = 0;
     ee.IpAddress[3] = 25;
     ee.ModelInverter = 5;
-    // save_eep_page();
-    gdataSaveFlag = 1;
+    save_eep_page();
     printf("a1 - %d ", uEepv.su.eeModelInverters[0]);
     printf("a2 - %d \n", uEepv.su.eeModelInverterIds[0]);
     // sbi(gResetSw, SYSTEM_RSW);
