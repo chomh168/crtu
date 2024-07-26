@@ -24,6 +24,7 @@ SET ( SRC_FILES
         src/dot_flash.c
         #src/iot_nml35.c
         src/util/util.cpp
+        src/inverter/inverter.cpp
         src/inverter/0.inverter_base.cpp
         src/inverter/1.Growatt.cpp
         src/inverter/2.Sungrow.cpp
