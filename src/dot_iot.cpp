@@ -18,7 +18,7 @@ enum HS_CMD {
   TOSS_232, 
   LORA_RST_CMD, 
   HELP, 
-  MAX_NUM_FROMPCCMD = 41
+  MAX_NUM_FROMPCCMD = 42
 };
 
 char* frompccmd_str_m2m[MAX_NUM_FROMPCCMD] = {
@@ -64,6 +64,7 @@ char* frompccmd_str_m2m[MAX_NUM_FROMPCCMD] = {
   "+CMT:", //37
   "setRTU:", //38
   "Reset", //39
+  "setServer:", //40
   "help" //MAX_NUM_FROMPCCMD - 1
 };
 
@@ -110,6 +111,10 @@ uEE uEepv = {
   0
 };
 
+uEEServer uEEserver = {
+  0
+};
+
 //	unsigned int ee.PortNumber = 8906;
 //	unsigned int ee.SendDelay;
 //	unsigned char ee.InverterCount = 1;	
@@ -121,6 +126,10 @@ uEE uEepv = {
 //	char ee.P_BPS_485;
 
 see ee = {
+  0
+};
+
+serverInfo serverinfo = {
   0
 };
 
@@ -146,10 +155,21 @@ void my_putc(uart_inst_t* uart, char val) {
   uart_putc(uart, val);
 }
 
+string replaceAll(string &str, const string& from, const string& to){
+    size_t start_pos = 0; //string처음부터 검사
+    while((start_pos = str.find(from, start_pos)) != string::npos)  //from을 찾을 수 없을 때까지
+    {
+        str.replace(start_pos, from.length(), to);
+        start_pos += to.length(); // 중복검사를 피하고 from.length() > to.length()인 경우를 위해서
+        if(start_pos >= str.length()) break;
+    }
+    return str;
+}
+
 unsigned char Cmd_judge(char* dest) {
   char tcmd_code = 0;
   char tmp_c;
-  char cmd_buf[50] = {
+  char cmd_buf[100] = {
     0
   };
   int subCmdValIndex = 0, tmp_iii;
@@ -166,6 +186,7 @@ unsigned char Cmd_judge(char* dest) {
   };
   vector<string> strSplit;
   int serverCode = 0;
+  string str;
 
   // match 1cmd
   i = (MAX_NUM_FROMPCCMD - 1);
@@ -375,27 +396,14 @@ unsigned char Cmd_judge(char* dest) {
       tmp_c = (char)(atoi(subval_addr));
       if ((tmp_c >= 0) && (tmp_c < 99))
         ee.ModelInverter = tmp_c;
-      gValIniFalg = 1;
     }
     sprintf(dbgSendbuf, "ivModeNum=%d", ee.ModelInverter);
     my_puts_string(dbgSndPort);
     break;
   case 27:
-    load_eep_page();
-    printf("ps id : %d /", ee.PortNumber);
-    printf("ps inv count : %d /", ee.InverterCount);
-    printf("ps model : %d /", ee.ModelInverter);
-    printf("ps IP : %d.%d.%d.%d /", ee.IpAddress[0],ee.IpAddress[1],ee.IpAddress[2],ee.IpAddress[3]);
-    printf("ps models : ");
-    for(int i = 0 ; i < 20 ; i++){
-       printf("%02d ", ee.eeModelInverters[i]);
-    }
-    printf("\n");
-    printf("ps model ids : ");
-    for(int i = 0 ; i < 20 ; i++){
-       printf("%02d ", ee.eeModelInverterIds[i]);
-    }
-    printf("\n");
+    load_eep_server();
+    printf("port : %d /", serverinfo.serverPort);
+    printf("domain - %s", serverinfo.serverDomain);
     // gFlcdIni = 1;
     break;
   case 28:
@@ -487,6 +495,16 @@ unsigned char Cmd_judge(char* dest) {
   case 39:
     sbi(gResetSw, SYSTEM_RSW);
     printf("now sys reboot....\r\n");
+    break;
+  case 40:
+    strncpy(cmd_buf, subval_addr, 100);
+    strSplit = split(cmd_buf,',');
+    serverinfo.serverPort = stoi(strSplit[0]);
+    memset(serverinfo.serverDomain, 0, sizeof(serverinfo.serverDomain));
+    strcpy(serverinfo.serverDomain, strSplit[1].c_str());
+    save_eep_server();
+    printf("domain - %s", serverinfo.serverDomain);
+    // sbi(gResetSw, SYSTEM_RSW);
     break;
   case (MAX_NUM_FROMPCCMD - 1):
     i = 1;
@@ -674,88 +692,88 @@ signed char adcValue = 0x12, oldAdcValue;
 unsigned char adcValue2, oldAdcValue2;
 ui16 key_val = 0x1f;
 
-char test_mk_ccs(char inv_number) {
-  char ccs;
+// char test_mk_ccs(char inv_number) {
+//   char ccs;
 
-  ccs = 0;
-  ccs ^= 'T';
-  ccs ^= (char)(ee.PortNumber / 0x100);
-  ccs ^= (char)(ee.PortNumber % 0x100);
-  ccs ^= (inv_number + 0x30);
+//   ccs = 0;
+//   ccs ^= 'T';
+//   ccs ^= (char)(ee.PortNumber / 0x100);
+//   ccs ^= (char)(ee.PortNumber % 0x100);
+//   ccs ^= (inv_number + 0x30);
 
-  inv_number--;
+//   inv_number--;
 
-  ccs ^= (char) adcValue;
-  ccs ^= (char) adcValue2;
-  ccs ^= (char) adcValue;
-  ccs ^= (char) rssiLevel;
-  ccs ^= (char) key_val;
+//   ccs ^= (char) adcValue;
+//   ccs ^= (char) adcValue2;
+//   ccs ^= (char) adcValue;
+//   ccs ^= (char) rssiLevel;
+//   ccs ^= (char) key_val;
 
-  ccs ^= (char)(inverter[inv_number].inverter_status[0] / 0x100);
-  ccs ^= (char)(inverter[inv_number].inverter_status[0] % 0x100);
-  ccs ^= (char)(inverter[inv_number].inverter_status[1] / 0x100);
-  ccs ^= (char)(inverter[inv_number].inverter_status[1] % 0x100);
-  ccs ^= (char)(inverter[inv_number].inverter_status[2] / 0x100);
-  ccs ^= (char)(inverter[inv_number].inverter_status[2] % 0x100);
-  ccs ^= (char)(inverter[inv_number].inverter_status[3] / 0x100);
-  ccs ^= (char)(inverter[inv_number].inverter_status[3] % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inverter_status[0] / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inverter_status[0] % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inverter_status[1] / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inverter_status[1] % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inverter_status[2] / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inverter_status[2] % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inverter_status[3] / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inverter_status[3] % 0x100);
 
-  ccs ^= (char)(inverter[inv_number].solar_cell_voltage / 0x100);
-  ccs ^= (char)(inverter[inv_number].solar_cell_voltage % 0x100);
-  ccs ^= (char)(inverter[inv_number].solar_cell_current / 0x100);
-  ccs ^= (char)(inverter[inv_number].solar_cell_current % 0x100);
+//   ccs ^= (char)(inverter[inv_number].solar_cell_voltage / 0x100);
+//   ccs ^= (char)(inverter[inv_number].solar_cell_voltage % 0x100);
+//   ccs ^= (char)(inverter[inv_number].solar_cell_current / 0x100);
+//   ccs ^= (char)(inverter[inv_number].solar_cell_current % 0x100);
 
-  ccs ^= (char)(inverter[inv_number].inv_u_voltage / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_u_voltage % 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_v_voltage / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_v_voltage % 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_w_voltage / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_w_voltage % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_u_voltage / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_u_voltage % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_v_voltage / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_v_voltage % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_w_voltage / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_w_voltage % 0x100);
 
-  ccs ^= (char)(inverter[inv_number].inv_u_current / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_u_current % 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_v_current / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_v_current % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_u_current / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_u_current % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_v_current / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_v_current % 0x100);
 
-  ccs ^= (char)(inverter[inv_number].inv_w_current / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_w_current % 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_frequency / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_frequency % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_w_current / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_w_current % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_frequency / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_frequency % 0x100);
 
-  ccs ^= (char)(inverter[inv_number].inv_u_voltage / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_u_voltage % 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_v_voltage / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_v_voltage % 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_w_voltage / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_w_voltage % 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_u_current / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_u_current % 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_v_current / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_v_current % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_u_voltage / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_u_voltage % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_v_voltage / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_v_voltage % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_w_voltage / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_w_voltage % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_u_current / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_u_current % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_v_current / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_v_current % 0x100);
 
-  ccs ^= (char)(inverter[inv_number].inv_w_current / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_w_current % 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_frequency / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_frequency % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_w_current / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_w_current % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_frequency / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_frequency % 0x100);
 
-  ccs ^= (char)(inverter[inv_number].power_solar / 0x100);
-  ccs ^= (char)(inverter[inv_number].power_solar % 0x100);
-  ccs ^= (char)((inverter[inv_number].power_inv_total >> 24) & 0xff);
-  ccs ^= (char)((inverter[inv_number].power_inv_total >> 16) & 0xff);
-  ccs ^= (char)((inverter[inv_number].power_inv_total >> 8) & 0xff);
-  ccs ^= (char)(inverter[inv_number].power_inv_total & 0xff);
-  ccs ^= (char)(inverter[inv_number].power_inv_now / 0x100);
-  ccs ^= (char)(inverter[inv_number].power_inv_now % 0x100);
-  ccs ^= (char)(inverter[inv_number].power_inv_now / 0x100);
-  ccs ^= (char)(inverter[inv_number].power_inv_now % 0x100);
+//   ccs ^= (char)(inverter[inv_number].power_solar / 0x100);
+//   ccs ^= (char)(inverter[inv_number].power_solar % 0x100);
+//   ccs ^= (char)((inverter[inv_number].power_inv_total >> 24) & 0xff);
+//   ccs ^= (char)((inverter[inv_number].power_inv_total >> 16) & 0xff);
+//   ccs ^= (char)((inverter[inv_number].power_inv_total >> 8) & 0xff);
+//   ccs ^= (char)(inverter[inv_number].power_inv_total & 0xff);
+//   ccs ^= (char)(inverter[inv_number].power_inv_now / 0x100);
+//   ccs ^= (char)(inverter[inv_number].power_inv_now % 0x100);
+//   ccs ^= (char)(inverter[inv_number].power_inv_now / 0x100);
+//   ccs ^= (char)(inverter[inv_number].power_inv_now % 0x100);
 
-  ccs ^= (char)(inverter[inv_number].power_inv_day_total / 0x100);
-  ccs ^= (char)(inverter[inv_number].power_inv_day_total % 0x100);
-  ccs ^= (char)(inverter[inv_number].power_inv_pf / 0x100);
-  ccs ^= (char)(inverter[inv_number].power_inv_pf % 0x100);
+//   ccs ^= (char)(inverter[inv_number].power_inv_day_total / 0x100);
+//   ccs ^= (char)(inverter[inv_number].power_inv_day_total % 0x100);
+//   ccs ^= (char)(inverter[inv_number].power_inv_pf / 0x100);
+//   ccs ^= (char)(inverter[inv_number].power_inv_pf % 0x100);
 
-  return ccs;
-}
+//   return ccs;
+// }
 
 unsigned char ui_2_uc(unsigned char num, ui16 val) {
   uni temp;
@@ -787,67 +805,67 @@ void makeIotPacketLTE(){
   memset(serverCharBody, 0, sizeof(serverCharBody));
 }
 
-void make_iot_paket_4_iot(char inv_number) {
-  char buf[100] = {
-    0
-  };
+// void make_iot_paket_4_iot(char inv_number) {
+//   char buf[100] = {
+//     0
+//   };
 
-  char ccs = 0;
+//   char ccs = 0;
 
-  //  memset(txdataIot,0,sizeof(txdataIot));
+//   //  memset(txdataIot,0,sizeof(txdataIot));
 
-  sprintf(buf, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", 0x55, 'T', ui_2_uc(1, ee.PortNumber), ui_2_uc(0, ee.PortNumber), (inv_number + 0x30), (unsigned char) adcValue, (unsigned char) adcValue2, (unsigned char) adcValue, ui_2_uc(0, rssiLevel), ui_2_uc(0, key_val));
-  //strcat(txdataIot,buf);
-  sprintf(txdataIot, "AT+WSOWR=0,136,FFFF%s", buf);
-  memset(buf, 0, sizeof(buf));
+//   sprintf(buf, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", 0x55, 'T', ui_2_uc(1, ee.PortNumber), ui_2_uc(0, ee.PortNumber), (inv_number + 0x30), (unsigned char) adcValue, (unsigned char) adcValue2, (unsigned char) adcValue, ui_2_uc(0, rssiLevel), ui_2_uc(0, key_val));
+//   //strcat(txdataIot,buf);
+//   sprintf(txdataIot, "AT+WSOWR=0,136,FFFF%s", buf);
+//   memset(buf, 0, sizeof(buf));
 
-  ccs = test_mk_ccs(inv_number);
+//   ccs = test_mk_ccs(inv_number);
 
-  inv_number--;
+//   inv_number--;
 
-  sprintf(buf, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", ui_2_uc(1, inverter[inv_number].inverter_status[0]), ui_2_uc(0, inverter[inv_number].inverter_status[0]), ui_2_uc(1, inverter[inv_number].inverter_status[1]), ui_2_uc(0, inverter[inv_number].inverter_status[1]), ui_2_uc(1, inverter[inv_number].inverter_status[2]), ui_2_uc(0, inverter[inv_number].inverter_status[2]), ui_2_uc(1, inverter[inv_number].inverter_status[3]), ui_2_uc(0, inverter[inv_number].inverter_status[3]), ui_2_uc(1, inverter[inv_number].solar_cell_voltage), ui_2_uc(0, inverter[inv_number].solar_cell_voltage), ui_2_uc(1, inverter[inv_number].solar_cell_current), ui_2_uc(0, inverter[inv_number].solar_cell_current));
-  strcat(txdataIot, buf);
+//   sprintf(buf, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", ui_2_uc(1, inverter[inv_number].inverter_status[0]), ui_2_uc(0, inverter[inv_number].inverter_status[0]), ui_2_uc(1, inverter[inv_number].inverter_status[1]), ui_2_uc(0, inverter[inv_number].inverter_status[1]), ui_2_uc(1, inverter[inv_number].inverter_status[2]), ui_2_uc(0, inverter[inv_number].inverter_status[2]), ui_2_uc(1, inverter[inv_number].inverter_status[3]), ui_2_uc(0, inverter[inv_number].inverter_status[3]), ui_2_uc(1, inverter[inv_number].solar_cell_voltage), ui_2_uc(0, inverter[inv_number].solar_cell_voltage), ui_2_uc(1, inverter[inv_number].solar_cell_current), ui_2_uc(0, inverter[inv_number].solar_cell_current));
+//   strcat(txdataIot, buf);
 
-  memset(buf, 0, sizeof(buf));
+//   memset(buf, 0, sizeof(buf));
 
-  sprintf(buf, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", ui_2_uc(1, inverter[inv_number].inv_u_voltage), ui_2_uc(0, inverter[inv_number].inv_u_voltage), ui_2_uc(1, inverter[inv_number].inv_v_voltage), ui_2_uc(0, inverter[inv_number].inv_v_voltage), ui_2_uc(1, inverter[inv_number].inv_w_voltage), ui_2_uc(0, inverter[inv_number].inv_w_voltage), ui_2_uc(1, inverter[inv_number].inv_u_current), ui_2_uc(0, inverter[inv_number].inv_u_current), ui_2_uc(1, inverter[inv_number].inv_v_current), ui_2_uc(0, inverter[inv_number].inv_v_current), ui_2_uc(1, inverter[inv_number].inv_w_current), ui_2_uc(0, inverter[inv_number].inv_w_current), ui_2_uc(1, inverter[inv_number].inv_frequency), ui_2_uc(0, inverter[inv_number].inv_frequency));
-  strcat(txdataIot, buf);
-  memset(buf, 0, sizeof(buf));
+//   sprintf(buf, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", ui_2_uc(1, inverter[inv_number].inv_u_voltage), ui_2_uc(0, inverter[inv_number].inv_u_voltage), ui_2_uc(1, inverter[inv_number].inv_v_voltage), ui_2_uc(0, inverter[inv_number].inv_v_voltage), ui_2_uc(1, inverter[inv_number].inv_w_voltage), ui_2_uc(0, inverter[inv_number].inv_w_voltage), ui_2_uc(1, inverter[inv_number].inv_u_current), ui_2_uc(0, inverter[inv_number].inv_u_current), ui_2_uc(1, inverter[inv_number].inv_v_current), ui_2_uc(0, inverter[inv_number].inv_v_current), ui_2_uc(1, inverter[inv_number].inv_w_current), ui_2_uc(0, inverter[inv_number].inv_w_current), ui_2_uc(1, inverter[inv_number].inv_frequency), ui_2_uc(0, inverter[inv_number].inv_frequency));
+//   strcat(txdataIot, buf);
+//   memset(buf, 0, sizeof(buf));
 
-  sprintf(buf, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", ui_2_uc(1, inverter[inv_number].inv_u_voltage), ui_2_uc(0, inverter[inv_number].inv_u_voltage), ui_2_uc(1, inverter[inv_number].inv_v_voltage), ui_2_uc(0, inverter[inv_number].inv_v_voltage), ui_2_uc(1, inverter[inv_number].inv_w_voltage), ui_2_uc(0, inverter[inv_number].inv_w_voltage), ui_2_uc(1, inverter[inv_number].inv_u_current), ui_2_uc(0, inverter[inv_number].inv_u_current), ui_2_uc(1, inverter[inv_number].inv_v_current), ui_2_uc(0, inverter[inv_number].inv_v_current), ui_2_uc(1, inverter[inv_number].inv_w_current), ui_2_uc(0, inverter[inv_number].inv_w_current), ui_2_uc(1, inverter[inv_number].inv_frequency), ui_2_uc(0, inverter[inv_number].inv_frequency));
+//   sprintf(buf, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", ui_2_uc(1, inverter[inv_number].inv_u_voltage), ui_2_uc(0, inverter[inv_number].inv_u_voltage), ui_2_uc(1, inverter[inv_number].inv_v_voltage), ui_2_uc(0, inverter[inv_number].inv_v_voltage), ui_2_uc(1, inverter[inv_number].inv_w_voltage), ui_2_uc(0, inverter[inv_number].inv_w_voltage), ui_2_uc(1, inverter[inv_number].inv_u_current), ui_2_uc(0, inverter[inv_number].inv_u_current), ui_2_uc(1, inverter[inv_number].inv_v_current), ui_2_uc(0, inverter[inv_number].inv_v_current), ui_2_uc(1, inverter[inv_number].inv_w_current), ui_2_uc(0, inverter[inv_number].inv_w_current), ui_2_uc(1, inverter[inv_number].inv_frequency), ui_2_uc(0, inverter[inv_number].inv_frequency));
 
-  strcat(txdataIot, buf);
-  memset(buf, 0, sizeof(buf));
+//   strcat(txdataIot, buf);
+//   memset(buf, 0, sizeof(buf));
 
-  sprintf(buf, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", ui_2_uc(1, inverter[inv_number].power_solar), ui_2_uc(0, inverter[inv_number].power_solar), ul_2_uc(3, inverter[inv_number].power_inv_total), ul_2_uc(2, inverter[inv_number].power_inv_total), ul_2_uc(1, inverter[inv_number].power_inv_total), ul_2_uc(0, inverter[inv_number].power_inv_total), ui_2_uc(1, inverter[inv_number].power_inv_now), ui_2_uc(0, inverter[inv_number].power_inv_now), ui_2_uc(1, inverter[inv_number].power_inv_now), ui_2_uc(0, inverter[inv_number].power_inv_now)
-    // ??     ,ul_2_uc(3,inverter[inv_number].power_inv_day_total),
-    // ??     ,ul_2_uc(2,inverter[inv_number].power_inv_day_total),
-    , ul_2_uc(1, inverter[inv_number].power_inv_day_total), ul_2_uc(0, inverter[inv_number].power_inv_day_total), ui_2_uc(1, inverter[inv_number].power_inv_pf), ui_2_uc(0, inverter[inv_number].power_inv_pf)
-  );
+//   sprintf(buf, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", ui_2_uc(1, inverter[inv_number].power_solar), ui_2_uc(0, inverter[inv_number].power_solar), ul_2_uc(3, inverter[inv_number].power_inv_total), ul_2_uc(2, inverter[inv_number].power_inv_total), ul_2_uc(1, inverter[inv_number].power_inv_total), ul_2_uc(0, inverter[inv_number].power_inv_total), ui_2_uc(1, inverter[inv_number].power_inv_now), ui_2_uc(0, inverter[inv_number].power_inv_now), ui_2_uc(1, inverter[inv_number].power_inv_now), ui_2_uc(0, inverter[inv_number].power_inv_now)
+//     // ??     ,ul_2_uc(3,inverter[inv_number].power_inv_day_total),
+//     // ??     ,ul_2_uc(2,inverter[inv_number].power_inv_day_total),
+//     , ul_2_uc(1, inverter[inv_number].power_inv_day_total), ul_2_uc(0, inverter[inv_number].power_inv_day_total), ui_2_uc(1, inverter[inv_number].power_inv_pf), ui_2_uc(0, inverter[inv_number].power_inv_pf)
+//   );
 
-  strcat(txdataIot, buf);
-  memset(buf, 0, sizeof(buf));
+//   strcat(txdataIot, buf);
+//   memset(buf, 0, sizeof(buf));
 
-  //ccs = mk_ccs(&txdataIot[0],0);
+//   //ccs = mk_ccs(&txdataIot[0],0);
 
-  sprintf(buf, "%01XAA\r\n", ccs);
+//   sprintf(buf, "%01XAA\r\n", ccs);
 
-  strcat(txdataIot, buf);
-  memset(buf, 0, sizeof(buf));
-}
+//   strcat(txdataIot, buf);
+//   memset(buf, 0, sizeof(buf));
+// }
 
-void make_iot_paket_4_iot_mdm(char inv_number) {
-  int i = 0;
+// void make_iot_paket_4_iot_mdm(char inv_number) {
+//   int i = 0;
 
-  make_iot_paket_4_iot(inv_number);
+//   make_iot_paket_4_iot(inv_number);
 
-  while ((txdataIot[i + 17]) != 0) {
-    txdataIot[i] = txdataIot[i + 15];
-    i++;
-    if (i >= (1024 - 2)) break;
-  }
-  txdataIot[i] = 0;
-}
+//   while ((txdataIot[i + 17]) != 0) {
+//     txdataIot[i] = txdataIot[i + 15];
+//     i++;
+//     if (i >= (1024 - 2)) break;
+//   }
+//   txdataIot[i] = 0;
+// }
 
 void get_time(char* str_clk) {
 
@@ -904,216 +922,216 @@ void putchar_test(char c, char ini) {
 }
 
 void sendWSOWR_T(char inv_number) {
-  //WRITE
-  char txbuffer2[60] = {
-    0
-  };
-  char ic = 0;
-  char ccs;
-  //    tx_rd_index2 = tx_wr_index2 = 0;      
-  //    bchecksum_flag2 = 0;
-  ccs = 0;
-  ccs ^= 'T';
-  ccs ^= (char)(ee.PortNumber / 0x100);
-  ccs ^= (char)(ee.PortNumber % 0x100);
-  ccs ^= (inv_number + 0x30);
+//   //WRITE
+//   char txbuffer2[60] = {
+//     0
+//   };
+//   char ic = 0;
+//   char ccs;
+//   //    tx_rd_index2 = tx_wr_index2 = 0;      
+//   //    bchecksum_flag2 = 0;
+//   ccs = 0;
+//   ccs ^= 'T';
+//   ccs ^= (char)(ee.PortNumber / 0x100);
+//   ccs ^= (char)(ee.PortNumber % 0x100);
+//   ccs ^= (inv_number + 0x30);
 
-  inv_number--;
+//   inv_number--;
 
-  ccs ^= (char) adcValue;
-  ccs ^= (char) adcValue2;
-  ccs ^= (char) adcValue;
-  ccs ^= (char) rssiLevel;
-  ccs ^= (char) key_val;
-  ccs ^= (char)(inverter[inv_number].inverter_status[0] / 0x100);
-  ccs ^= (char)(inverter[inv_number].inverter_status[0] % 0x100);
-  ccs ^= (char)(inverter[inv_number].inverter_status[1] / 0x100);
-  ccs ^= (char)(inverter[inv_number].inverter_status[1] % 0x100);
-  ccs ^= (char)(inverter[inv_number].inverter_status[2] / 0x100);
-  ccs ^= (char)(inverter[inv_number].inverter_status[2] % 0x100);
-  ccs ^= (char)(inverter[inv_number].inverter_status[3] / 0x100);
-  ccs ^= (char)(inverter[inv_number].inverter_status[3] % 0x100);
+//   ccs ^= (char) adcValue;
+//   ccs ^= (char) adcValue2;
+//   ccs ^= (char) adcValue;
+//   ccs ^= (char) rssiLevel;
+//   ccs ^= (char) key_val;
+//   ccs ^= (char)(inverter[inv_number].inverter_status[0] / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inverter_status[0] % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inverter_status[1] / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inverter_status[1] % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inverter_status[2] / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inverter_status[2] % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inverter_status[3] / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inverter_status[3] % 0x100);
 
-  ccs ^= (char)(inverter[inv_number].solar_cell_voltage / 0x100);
-  ccs ^= (char)(inverter[inv_number].solar_cell_voltage % 0x100);
-  ccs ^= (char)(inverter[inv_number].solar_cell_current / 0x100);
-  ccs ^= (char)(inverter[inv_number].solar_cell_current % 0x100);
+//   ccs ^= (char)(inverter[inv_number].solar_cell_voltage / 0x100);
+//   ccs ^= (char)(inverter[inv_number].solar_cell_voltage % 0x100);
+//   ccs ^= (char)(inverter[inv_number].solar_cell_current / 0x100);
+//   ccs ^= (char)(inverter[inv_number].solar_cell_current % 0x100);
 
-  ccs ^= (char)(inverter[inv_number].inv_u_voltage / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_u_voltage % 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_v_voltage / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_v_voltage % 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_w_voltage / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_w_voltage % 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_u_current / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_u_current % 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_v_current / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_v_current % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_u_voltage / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_u_voltage % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_v_voltage / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_v_voltage % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_w_voltage / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_w_voltage % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_u_current / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_u_current % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_v_current / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_v_current % 0x100);
 
-  ccs ^= (char)(inverter[inv_number].inv_w_current / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_w_current % 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_frequency / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_frequency % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_w_current / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_w_current % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_frequency / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_frequency % 0x100);
 
-  ccs ^= (char)(inverter[inv_number].inv_u_voltage / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_u_voltage % 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_v_voltage / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_v_voltage % 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_w_voltage / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_w_voltage % 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_u_current / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_u_current % 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_v_current / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_v_current % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_u_voltage / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_u_voltage % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_v_voltage / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_v_voltage % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_w_voltage / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_w_voltage % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_u_current / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_u_current % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_v_current / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_v_current % 0x100);
 
-  ccs ^= (char)(inverter[inv_number].inv_w_current / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_w_current % 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_frequency / 0x100);
-  ccs ^= (char)(inverter[inv_number].inv_frequency % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_w_current / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_w_current % 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_frequency / 0x100);
+//   ccs ^= (char)(inverter[inv_number].inv_frequency % 0x100);
 
-  ccs ^= (char)(inverter[inv_number].power_solar / 0x100);
-  ccs ^= (char)(inverter[inv_number].power_solar % 0x100);
-  ccs ^= (char)((inverter[inv_number].power_inv_total >> 24) & 0xff);
-  ccs ^= (char)((inverter[inv_number].power_inv_total >> 16) & 0xff);
-  ccs ^= (char)((inverter[inv_number].power_inv_total >> 8) & 0xff);
-  ccs ^= (char)(inverter[inv_number].power_inv_total & 0xff);
-  ccs ^= (char)(inverter[inv_number].power_inv_now / 0x100);
-  ccs ^= (char)(inverter[inv_number].power_inv_now % 0x100);
-  ccs ^= (char)(inverter[inv_number].power_inv_now / 0x100);
-  ccs ^= (char)(inverter[inv_number].power_inv_now % 0x100);
+//   ccs ^= (char)(inverter[inv_number].power_solar / 0x100);
+//   ccs ^= (char)(inverter[inv_number].power_solar % 0x100);
+//   ccs ^= (char)((inverter[inv_number].power_inv_total >> 24) & 0xff);
+//   ccs ^= (char)((inverter[inv_number].power_inv_total >> 16) & 0xff);
+//   ccs ^= (char)((inverter[inv_number].power_inv_total >> 8) & 0xff);
+//   ccs ^= (char)(inverter[inv_number].power_inv_total & 0xff);
+//   ccs ^= (char)(inverter[inv_number].power_inv_now / 0x100);
+//   ccs ^= (char)(inverter[inv_number].power_inv_now % 0x100);
+//   ccs ^= (char)(inverter[inv_number].power_inv_now / 0x100);
+//   ccs ^= (char)(inverter[inv_number].power_inv_now % 0x100);
 
-  ccs ^= (char)(inverter[inv_number].power_inv_day_total / 0x100);
-  ccs ^= (char)(inverter[inv_number].power_inv_day_total % 0x100);
-  ccs ^= (char)(inverter[inv_number].power_inv_pf / 0x100);
-  ccs ^= (char)(inverter[inv_number].power_inv_pf % 0x100);
+//   ccs ^= (char)(inverter[inv_number].power_inv_day_total / 0x100);
+//   ccs ^= (char)(inverter[inv_number].power_inv_day_total % 0x100);
+//   ccs ^= (char)(inverter[inv_number].power_inv_pf / 0x100);
+//   ccs ^= (char)(inverter[inv_number].power_inv_pf % 0x100);
 
-  //printf(txbuffer1,"T$$TCPWRITE=!");
-  putchar_test('T', 1);
-  putchar_test('+', 1);
-  putchar_test('W', 1);
-  putchar_test('S', 1);
-  putchar_test('O', 1);
-  putchar_test('W', 1);
-  putchar_test('R', 1);
-  putchar_test('=', 1);
-  putchar_test('0', 1);
-  putchar_test(',', 1);
-  putchar_test('1', 1);
-  putchar_test('3', 1);
-  putchar_test('6', 1);
-  putchar_test(',', 1);
+//   //printf(txbuffer1,"T$$TCPWRITE=!");
+//   putchar_test('T', 1);
+//   putchar_test('+', 1);
+//   putchar_test('W', 1);
+//   putchar_test('S', 1);
+//   putchar_test('O', 1);
+//   putchar_test('W', 1);
+//   putchar_test('R', 1);
+//   putchar_test('=', 1);
+//   putchar_test('0', 1);
+//   putchar_test(',', 1);
+//   putchar_test('1', 1);
+//   putchar_test('3', 1);
+//   putchar_test('6', 1);
+//   putchar_test(',', 1);
 
-  putchar_test('F', 1);
-  putchar_test('F', 1);
-  putchar_test('F', 1);
-  putchar_test('F', 1);
+//   putchar_test('F', 1);
+//   putchar_test('F', 1);
+//   putchar_test('F', 1);
+//   putchar_test('F', 1);
 
-  /////////////////////////////////////////////////////////////
-  sprintf(txbuffer2, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
-    0x55, 'T', (unsigned char)(ee.PortNumber / 0x100), (unsigned char)(ee.PortNumber % 0x100), (inv_number + 0x31),
+//   /////////////////////////////////////////////////////////////
+//   sprintf(txbuffer2, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
+//     0x55, 'T', (unsigned char)(ee.PortNumber / 0x100), (unsigned char)(ee.PortNumber % 0x100), (inv_number + 0x31),
 
-    (unsigned char) adcValue,
-    (unsigned char) adcValue2,
-    (unsigned char) adcValue,
-    (unsigned char) rssiLevel,
-    (unsigned char) key_val);
+//     (unsigned char) adcValue,
+//     (unsigned char) adcValue2,
+//     (unsigned char) adcValue,
+//     (unsigned char) rssiLevel,
+//     (unsigned char) key_val);
 
-  for (ic = 0; ic < 20; ic++) {
-    putchar_test(txbuffer2[ic], 1);
-  }
+//   for (ic = 0; ic < 20; ic++) {
+//     putchar_test(txbuffer2[ic], 1);
+//   }
 
-  sprintf(txbuffer2, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
+//   sprintf(txbuffer2, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
 
-    (unsigned char)(inverter[inv_number].inverter_status[0] / 0x100),
-    (unsigned char)(inverter[inv_number].inverter_status[0] % 0x100),
-    (unsigned char)(inverter[inv_number].inverter_status[1] / 0x100),
-    (unsigned char)(inverter[inv_number].inverter_status[1] % 0x100),
-    (unsigned char)(inverter[inv_number].inverter_status[2] / 0x100),
-    (unsigned char)(inverter[inv_number].inverter_status[2] % 0x100),
-    (unsigned char)(inverter[inv_number].inverter_status[3] / 0x100),
-    (unsigned char)(inverter[inv_number].inverter_status[3] % 0x100),
+//     (unsigned char)(inverter[inv_number].inverter_status[0] / 0x100),
+//     (unsigned char)(inverter[inv_number].inverter_status[0] % 0x100),
+//     (unsigned char)(inverter[inv_number].inverter_status[1] / 0x100),
+//     (unsigned char)(inverter[inv_number].inverter_status[1] % 0x100),
+//     (unsigned char)(inverter[inv_number].inverter_status[2] / 0x100),
+//     (unsigned char)(inverter[inv_number].inverter_status[2] % 0x100),
+//     (unsigned char)(inverter[inv_number].inverter_status[3] / 0x100),
+//     (unsigned char)(inverter[inv_number].inverter_status[3] % 0x100),
 
-    (unsigned char)(inverter[inv_number].solar_cell_voltage / 0x100),
-    (unsigned char)(inverter[inv_number].solar_cell_voltage % 0x100),
-    (unsigned char)(inverter[inv_number].solar_cell_current / 0x100),
-    (unsigned char)(inverter[inv_number].solar_cell_current % 0x100));
-  for (ic = 0; ic < 24; ic++) {
-    putchar_test(txbuffer2[ic], 1);
-  }
+//     (unsigned char)(inverter[inv_number].solar_cell_voltage / 0x100),
+//     (unsigned char)(inverter[inv_number].solar_cell_voltage % 0x100),
+//     (unsigned char)(inverter[inv_number].solar_cell_current / 0x100),
+//     (unsigned char)(inverter[inv_number].solar_cell_current % 0x100));
+//   for (ic = 0; ic < 24; ic++) {
+//     putchar_test(txbuffer2[ic], 1);
+//   }
 
-  sprintf(txbuffer2, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
-    (unsigned char)(inverter[inv_number].inv_u_voltage / 0x100),
-    (unsigned char)(inverter[inv_number].inv_u_voltage % 0x100),
-    (unsigned char)(inverter[inv_number].inv_v_voltage / 0x100),
-    (unsigned char)(inverter[inv_number].inv_v_voltage % 0x100),
-    (unsigned char)(inverter[inv_number].inv_w_voltage / 0x100),
-    (unsigned char)(inverter[inv_number].inv_w_voltage % 0x100),
-    (unsigned char)(inverter[inv_number].inv_u_current / 0x100),
-    (unsigned char)(inverter[inv_number].inv_u_current % 0x100),
-    (unsigned char)(inverter[inv_number].inv_v_current / 0x100),
-    (unsigned char)(inverter[inv_number].inv_v_current % 0x100),
+//   sprintf(txbuffer2, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
+//     (unsigned char)(inverter[inv_number].inv_u_voltage / 0x100),
+//     (unsigned char)(inverter[inv_number].inv_u_voltage % 0x100),
+//     (unsigned char)(inverter[inv_number].inv_v_voltage / 0x100),
+//     (unsigned char)(inverter[inv_number].inv_v_voltage % 0x100),
+//     (unsigned char)(inverter[inv_number].inv_w_voltage / 0x100),
+//     (unsigned char)(inverter[inv_number].inv_w_voltage % 0x100),
+//     (unsigned char)(inverter[inv_number].inv_u_current / 0x100),
+//     (unsigned char)(inverter[inv_number].inv_u_current % 0x100),
+//     (unsigned char)(inverter[inv_number].inv_v_current / 0x100),
+//     (unsigned char)(inverter[inv_number].inv_v_current % 0x100),
 
-    (unsigned char)(inverter[inv_number].inv_w_current / 0x100),
-    (unsigned char)(inverter[inv_number].inv_w_current % 0x100),
-    (unsigned char)(inverter[inv_number].inv_frequency / 0x100),
-    (unsigned char)(inverter[inv_number].inv_frequency % 0x100));
-  for (ic = 0; ic < 28; ic++) {
-    putchar_test(txbuffer2[ic], 1);
-  }
+//     (unsigned char)(inverter[inv_number].inv_w_current / 0x100),
+//     (unsigned char)(inverter[inv_number].inv_w_current % 0x100),
+//     (unsigned char)(inverter[inv_number].inv_frequency / 0x100),
+//     (unsigned char)(inverter[inv_number].inv_frequency % 0x100));
+//   for (ic = 0; ic < 28; ic++) {
+//     putchar_test(txbuffer2[ic], 1);
+//   }
 
-  sprintf(txbuffer2, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
-    (unsigned char)(inverter[inv_number].inv_u_voltage / 0x100),
-    (unsigned char)(inverter[inv_number].inv_u_voltage % 0x100),
-    (unsigned char)(inverter[inv_number].inv_v_voltage / 0x100),
-    (unsigned char)(inverter[inv_number].inv_v_voltage % 0x100),
-    (unsigned char)(inverter[inv_number].inv_w_voltage / 0x100),
-    (unsigned char)(inverter[inv_number].inv_w_voltage % 0x100),
-    (unsigned char)(inverter[inv_number].inv_u_current / 0x100),
-    (unsigned char)(inverter[inv_number].inv_u_current % 0x100),
-    (unsigned char)(inverter[inv_number].inv_v_current / 0x100),
-    (unsigned char)(inverter[inv_number].inv_v_current % 0x100),
+//   sprintf(txbuffer2, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
+//     (unsigned char)(inverter[inv_number].inv_u_voltage / 0x100),
+//     (unsigned char)(inverter[inv_number].inv_u_voltage % 0x100),
+//     (unsigned char)(inverter[inv_number].inv_v_voltage / 0x100),
+//     (unsigned char)(inverter[inv_number].inv_v_voltage % 0x100),
+//     (unsigned char)(inverter[inv_number].inv_w_voltage / 0x100),
+//     (unsigned char)(inverter[inv_number].inv_w_voltage % 0x100),
+//     (unsigned char)(inverter[inv_number].inv_u_current / 0x100),
+//     (unsigned char)(inverter[inv_number].inv_u_current % 0x100),
+//     (unsigned char)(inverter[inv_number].inv_v_current / 0x100),
+//     (unsigned char)(inverter[inv_number].inv_v_current % 0x100),
 
-    (unsigned char)(inverter[inv_number].inv_w_current / 0x100),
-    (unsigned char)(inverter[inv_number].inv_w_current % 0x100),
-    (unsigned char)(inverter[inv_number].inv_frequency / 0x100),
-    (unsigned char)(inverter[inv_number].inv_frequency % 0x100));
+//     (unsigned char)(inverter[inv_number].inv_w_current / 0x100),
+//     (unsigned char)(inverter[inv_number].inv_w_current % 0x100),
+//     (unsigned char)(inverter[inv_number].inv_frequency / 0x100),
+//     (unsigned char)(inverter[inv_number].inv_frequency % 0x100));
 
-  for (ic = 0; ic < 28; ic++) {
-    putchar_test(txbuffer2[ic], 1);
-  }
+//   for (ic = 0; ic < 28; ic++) {
+//     putchar_test(txbuffer2[ic], 1);
+//   }
 
-  sprintf(txbuffer2, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
-    (unsigned char)(inverter[inv_number].power_solar / 0x100),
-    (unsigned char)(inverter[inv_number].power_solar % 0x100),
-    (unsigned char)((inverter[inv_number].power_inv_total >> 24) & 0xff),
-    (unsigned char)((inverter[inv_number].power_inv_total >> 16) & 0xff),
-    (unsigned char)((inverter[inv_number].power_inv_total >> 8) & 0xff),
-    (unsigned char)(inverter[inv_number].power_inv_total & 0xff),
-    (unsigned char)(inverter[inv_number].power_inv_now / 0x100),
-    (unsigned char)(inverter[inv_number].power_inv_now % 0x100),
-    (unsigned char)(inverter[inv_number].power_inv_now / 0x100),
-    (unsigned char)(inverter[inv_number].power_inv_now % 0x100),
+//   sprintf(txbuffer2, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
+//     (unsigned char)(inverter[inv_number].power_solar / 0x100),
+//     (unsigned char)(inverter[inv_number].power_solar % 0x100),
+//     (unsigned char)((inverter[inv_number].power_inv_total >> 24) & 0xff),
+//     (unsigned char)((inverter[inv_number].power_inv_total >> 16) & 0xff),
+//     (unsigned char)((inverter[inv_number].power_inv_total >> 8) & 0xff),
+//     (unsigned char)(inverter[inv_number].power_inv_total & 0xff),
+//     (unsigned char)(inverter[inv_number].power_inv_now / 0x100),
+//     (unsigned char)(inverter[inv_number].power_inv_now % 0x100),
+//     (unsigned char)(inverter[inv_number].power_inv_now / 0x100),
+//     (unsigned char)(inverter[inv_number].power_inv_now % 0x100),
 
-    (unsigned char)(inverter[inv_number].power_inv_day_total / 0x100),
-    (unsigned char)(inverter[inv_number].power_inv_day_total % 0x100),
-    (unsigned char)(inverter[inv_number].power_inv_pf / 0x100),
-    (unsigned char)(inverter[inv_number].power_inv_pf % 0x100));
-  for (ic = 0; ic < 28; ic++) {
-    putchar_test(txbuffer2[ic], 1);
-  }
+//     (unsigned char)(inverter[inv_number].power_inv_day_total / 0x100),
+//     (unsigned char)(inverter[inv_number].power_inv_day_total % 0x100),
+//     (unsigned char)(inverter[inv_number].power_inv_pf / 0x100),
+//     (unsigned char)(inverter[inv_number].power_inv_pf % 0x100));
+//   for (ic = 0; ic < 28; ic++) {
+//     putchar_test(txbuffer2[ic], 1);
+//   }
 
-  //    bchecksum_flag2 = 0;
-  sprintf(txbuffer2, "%02X%02X", ccs, 0xAA);
-  for (ic = 0; ic < 4; ic++) {
-    putchar_test(txbuffer2[ic], 1);
-  }
-  putchar_test(0x0d, 1);
-  putchar_test(0x0a, 1);
+//   //    bchecksum_flag2 = 0;
+//   sprintf(txbuffer2, "%02X%02X", ccs, 0xAA);
+//   for (ic = 0; ic < 4; ic++) {
+//     putchar_test(txbuffer2[ic], 1);
+//   }
+//   putchar_test(0x0d, 1);
+//   putchar_test(0x0a, 1);
 
-  //    rx_seq2 = 0;  
-  //    timeout2 = 15000;
-  //UDR2 = 'A';
-  txdataIot[0] = 'A';
+//   //    rx_seq2 = 0;  
+//   //    timeout2 = 15000;
+//   //UDR2 = 'A';
+//   txdataIot[0] = 'A';
 
 }
 
@@ -1169,7 +1187,7 @@ ui16 msg_send_2_iot_M2M(void) {
     case 20:
     case 21: // test pak  
       sSqcIot_m2m = 3;
-      make_iot_paket_4_iot_mdm(1);
+      // make_iot_paket_4_iot_mdm(1);
       my_puts_string(ToIot);
       break;
     case 22:
@@ -1375,8 +1393,8 @@ ui16 msg_send_2_iot_LTE(bool& init) {
   if (iotSendSw & bv(TCPSENDDATA_ICF)) {
     switch (sub_sqc) {
     case 0:
-      // sprintf(txdataIot, "AT+WSOCR=0,hstec.kr,%d,1,1\r\n", gTcpPort);
-      sprintf(txdataIot, "AT+WSOCR=0,chomh168.iptime.org,8124,1,1\r\n");
+      if (serverinfo.serverPort > 0) sprintf(txdataIot, "AT+WSOCR=0,%s,%d,1,1\r\n", serverinfo.serverDomain, serverinfo.serverPort);
+      else sprintf(txdataIot, "AT+WSOCR=0,chomh168.iptime.org,8124,1,1\r\n");
       my_puts_string(ToIot);
       sub_sqc = 1;
       wait_time = 1;

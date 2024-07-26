@@ -27,15 +27,6 @@ float gNowtemp   =0;
 float gNowBLack_V = 0;
 int   gfBlackOut = 0;
 
-void  Handler(int signo)
-{
-    //System Exit
-    printf("\r\nHandler:exit\r\n");
-    DEV_ModuleExit();
-
-    exit(0);
-}
-
 void adc_ini_crtu(void);
 int OLED_1in5_rgb_test_1(void);
 extern void drv_lcd_1in5_oled(void);
@@ -44,6 +35,8 @@ extern void drv_recev_inv_tV7(void);
 extern void drv_send_nml35(void);	
 extern int save_eep_page (void);
 extern int load_eep_page (void);
+extern int save_eep_server (void);
+extern int load_eep_server (void);
 //extern void drv_lora_nml35(void);
 extern char Cmd_judge_lora(char * dest);
 extern char Cmd_judge(char * dest);
@@ -203,6 +196,7 @@ int main() {
 	i2c_ini_dot();
 	adc_ini_crtu();
 	load_eep_page();
+	load_eep_server();
 	cdcd_init();
 
 	init_inverter();

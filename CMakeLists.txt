@@ -14,7 +14,7 @@ SET ( SRC_FILES
         src/dot_iot.cpp
         src/eep_at24c128.cpp
         src/OLED_1in5_test.c
-        src/SRTU_V7.c
+        # src/SRTU_V7.c
         #src/lib/Config/Dev_hardware_SPI.c
         src/lib/GUI/GUI_Paint.c
         src/lib/OLED/OLED_1in5.c

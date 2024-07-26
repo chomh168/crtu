@@ -3,6 +3,7 @@
 #define _DOTCORE_IOT_
 
 #include "hs_global.h"
+#include <algorithm>
 
 
 enum IOT_CHECK_FLAG{
@@ -83,6 +84,8 @@ extern void h_Flash_cmd(void);
 extern void drv_lora_nml35(void);
 extern int save_eep_page (void);
 extern int load_eep_page (void);
+extern int save_eep_server (void);
+extern int load_eep_server (void);
 //----------------------------------------------------------------------
 
 

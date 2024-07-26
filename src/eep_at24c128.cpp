@@ -13,6 +13,8 @@ typedef union {
 
 
 extern uEE uEepv ;
+extern uEEServer uEEserver;
+extern serverInfo serverinfo;
 
 uint8_t addr_24c_high = 0xD0;
 
@@ -157,6 +159,42 @@ int load_eep (ui16 * oaddr){
 	return val; 
 }
 
+int save_eep_server (void){
+	unsigned char data[2048] = {0};
+	int i  = 0 , err_code;
+
+	uEEserver.info.serverPort = serverinfo.serverPort;
+	for(int i = 0 ; i < 100 ; i++){
+		uEEserver.info.serverDomain[i] = serverinfo.serverDomain[i];
+	}
+
+	int offset = 0;
+	int length = 96;
+	int page = 64;
+	int count = 0;
+	int eepAddress = 256;
+    while (offset < length) {
+		data[i] = ((eepAddress+(page+2)*count) >> 8) & 0xFF;
+		data[i+1] = (eepAddress+(page+2)*count) & 0xFF;
+		count++;
+
+		// i2c start
+		while (1)
+		{
+			data[i+2] = uEEserver.addb[i + offset];
+			i++;
+			if(i > page)break;
+		}
+
+		int chunk_length = (length - offset) < page ? (length - offset) : page;
+		err_code = i2c_write_blocking(DOT_DEFAULT_I2C, addr_24c_high, data, chunk_length + 2, false);
+		sleep_ms(10);
+		offset += chunk_length;
+		i = 0;
+	}
+	return err_code;
+}
+
 int save_eep_page (void){
 	unsigned char data[2048] = {0};
 	int i  = 0 , err_code;
@@ -201,6 +239,42 @@ int save_eep_page (void){
 		sleep_ms(10);
 		offset += chunk_length;
 		i = 0;
+	}
+	return err_code;
+}
+
+int load_eep_server (void){
+	unsigned char data[2048] = {0};
+	int i  = 0 , err_code;
+
+	int offset = 0;
+	int length = 96;
+	int page = 64;
+	int count = 0;
+	int eepAddress = 256;
+    while (offset < length) {
+		data[i] = ((eepAddress+(page+2)*count) >> 8) & 0xFF;
+		data[i+1] = (eepAddress+(page+2)*count) & 0xFF;
+		count++;
+
+		i2c_write_blocking(DOT_DEFAULT_I2C, addr_24c_high, data , 2, true);
+
+		int chunk_length = (length - offset) < page ? (length - offset) : page;
+		err_code = i2c_read_blocking(DOT_DEFAULT_I2C, addr_24c_high, data + 2, chunk_length, false);
+		// i2c start
+		while (1)
+		{
+			uEEserver.addb[offset + i]  = data[i+2] ;
+			i++;
+			if(i > page)break;
+		}
+		offset += chunk_length;
+		i = 0;
+	}
+
+	serverinfo.serverPort = (short)uEEserver.info.serverPort;
+	for(int i = 0 ; i < 100 ; i++){
+		serverinfo.serverDomain[i] = (char)uEEserver.info.serverDomain[i];
 	}
 	return err_code;
 }

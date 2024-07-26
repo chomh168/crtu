@@ -35,6 +35,8 @@ extern int at24_read_byte (ui16 addr ,char *  dest);
 extern int at24_read_word (ui16 addr ,ui16 * dest);
 int save_eep_page (void);
 int load_eep_page (void);
+int save_eep_server (void);
+int load_eep_server (void);
 
 
 extern see ee;

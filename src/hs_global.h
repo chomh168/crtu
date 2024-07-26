@@ -228,6 +228,11 @@ typedef struct	{
 }see; 
 
 typedef struct	{
+	unsigned short serverPort;	
+	char serverDomain[100];
+}serverInfo; 
+
+typedef struct	{
 	si16 aeePortNumber; 
 	si16 aeetcpport; 
 	si16 aeemode; 
@@ -251,6 +256,11 @@ typedef struct	{
 	ui16 eeModelInverters[20];
 	ui16 eeModelInverterIds[20];
 }ssu;
+
+typedef struct	{
+	ui16 serverPort;
+	ui16 serverDomain[100];
+}eServerInfo;
 
 
 typedef struct {
@@ -286,6 +296,12 @@ typedef union {
 	ui16 addi[1024];
 	ssu su;
 }uEE;
+
+typedef union {
+	unsigned char addb[2048];
+	ui16 addi[512];
+	eServerInfo info;
+}uEEServer;
 
 typedef union {
 	long int dl;
@@ -380,7 +396,6 @@ int makeSendBodyPacket();
 
 //-----------------------------------------------------------------------
 extern int gSysCnt;
-extern char gValIniFalg;
 extern my_dev devInfo;
 
 //--------------------
