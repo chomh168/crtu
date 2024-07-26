@@ -4,7 +4,7 @@
 InverterSungrow::InverterSungrow(short invno) : InverterBase(invno) {
     this->setModel(7);
     this->setBaudRate(9600);
-    this->setSerializeLength(42);//todo
+    this->setSerializeLength(42);
     this->packetLength = 8;
     this->packetSendLength[0] = 80;
     this->sendPacketList.push_back(this->makeModbusSendPacket(3, 5003, this->packetSendLength[0]));

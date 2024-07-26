@@ -8,8 +8,6 @@
 #include "hs_global.h"
 #include "test.h"
 #include "util/util.h"
-// #include "0.inverter_base.h"
-// #include "1.Growatt.h"
 #include "inverter.h"
 #include <map>
 #include <iterator>
@@ -220,20 +218,20 @@ int main() {
 
    while (true) {
         //---------- 1ms tic --call back int.---------------- 
-     if(alarm_fired == true) {
+     	if(alarm_fired == true) {
             alarm_fired = false;
             alarm_in_us(1000);
             gSysCnt++;
      	}
      //---sys handle-----------------------------------------------
-       proc_1ms_tic();
-	   on_uart_rx_0();	 
-	   on_uart_rx_1();	
-	   on_stdio_usb_rx();
+		proc_1ms_tic();
+		on_uart_rx_0();	 
+		on_uart_rx_1();	
+		on_stdio_usb_rx();
 		 //------------------------------------------
-	   showHL();
+	   	showHL();
 	//    drv_temp_check();	
-	watchdog_update();
+		watchdog_update();
 //-----------------------------
       
 
@@ -310,8 +308,7 @@ int makeSendBodyPacket(){
 
 
 void makeSendHeaderPacket(int bodyLength, int type, int model, int moduleCount){
-	int id = 1;
-	setCharArrayByInt(&serverHeader[0], id, 4);
+	setCharArrayByInt(&serverHeader[0], ee.PortNumber, 4);
 	setCharArrayByInt(&serverHeader[4], bodyLength, 4);
 	setCharArrayByInt(&serverHeader[8], type, 2); //packet Type - 1: inverter
 	setCharArrayByInt(&serverHeader[10], model, 2);
@@ -333,10 +330,10 @@ int getCurrentBodyPacket(){
 		makeSendHeaderPacket(bodyIt->second.size(), CLIENT_ERROR, bodyIt->first * -1, bodyIt->second.size() / 2);
 	}
 	else{
-		makeSendHeaderPacket(bodyIt->second.size(), CLIENT_INVERTER, bodyIt->first, bodyIt->second.size()/modelSerializeLength[bodyIt->first]);
+		makeSendHeaderPacket(bodyIt->second.size(), CLIENT_INVERTER, bodyIt->first, bodyIt->second.size() / modelSerializeLength[bodyIt->first]);
 	}
 	
-	bodyIt->second.insert(bodyIt->second.begin(), serverHeader, serverHeader+14);
+	bodyIt->second.insert(bodyIt->second.begin(), serverHeader, serverHeader + 14);
 	packetSize = bodyIt->second.size();
 	memcpy(serverCharBody, bodyIt->second.data(), bodyIt->second.size());
 	bodyIt->second.clear();
@@ -427,11 +424,6 @@ void check_delay_inv(){
 		delayCount = 0;
 	}
 	else {
-		// unsigned char* sendPacket = nowInverter->getSendPacketList()[sendPacketCount];
-		// int length = nowInverter->getPacketLength();
-		// txdataInv[0] = length;
-		// copy(sendPacket, sendPacket + length, txdataInv + 1);
-		// sendReactionTriger = 1;
 		set_send_packet_txdataInv();
 	}
 }
@@ -440,11 +432,6 @@ void set_send_inv_packet(){
 	if((gSysCnt - invResponseDelay) < 1000) return;
 	if (nowInverter->getRecvOk() == true || isInvResponseDelay == true){
 		invResponseDelay = gSysCnt;
-		// unsigned char* sendPacket = nowInverter->getSendPacketList()[sendPacketCount++];
-		// int length = nowInverter->getPacketLength();
-		// txdataInv[0] = length;
-		// copy(sendPacket, sendPacket + length, txdataInv + 1);
-		// sendReactionTriger = 1;
 		set_send_packet_txdataInv();
 		sendPacketCount++;
 		// tx display
@@ -469,7 +456,7 @@ void init_inverter(){
 		inverters[key] = getInverterInstance(ee.eeModelInverters[i], ee.eeModelInverterIds[i]);
 		inverters[key]->clearValue(true);
 		inverters[key]->setValid(false);
-		modelSerializeLength[nowInverter->getModel()] = nowInverter->getSerializeLength();
+		modelSerializeLength[inverters[key]->getModel()] = inverters[key]->getSerializeLength();
 		if (i == 0){
 			nowInverter = inverters[key];
 			uart_init(UART_ID_1, nowInverter->getBaudRate());
