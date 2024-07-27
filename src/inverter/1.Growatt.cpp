@@ -13,7 +13,7 @@ void InverterGrowatt::decodePacket(unsigned char* recvBuffer, int sendPacketCoun
     this->fault[0] = ucharToShort(&recvBuffer[3]);
     
     int dckw = ucharToUint(&recvBuffer[5]);
-    this->dckw = (short)(dckw/1000);
+    this->dckw = (short)(dckw/100);
     
     int dcvs[8];
     dcvs[0] = ucharToShort(&recvBuffer[9]);
@@ -40,9 +40,9 @@ void InverterGrowatt::decodePacket(unsigned char* recvBuffer, int sendPacketCoun
     this->dca = accumulate(dcas, dcas + 8, 0);
 
     int ackw = ucharToUint(&recvBuffer[73]);
-    this->ackw = (short)(ackw/1000);
+    this->ackw = (short)(ackw/100);
 
-    this->freq = ucharToShort(&recvBuffer[77]);
+    this->freq = ucharToShort(&recvBuffer[77])/10;
 
     this->acvr = ucharToShort(&recvBuffer[79]);
     this->acar = ucharToShort(&recvBuffer[81]);
@@ -60,7 +60,7 @@ void InverterGrowatt::decodePacket(unsigned char* recvBuffer, int sendPacketCoun
     this->invTemp2 = ucharToShort(&recvBuffer[191]);
     this->invTemp3 = ucharToShort(&recvBuffer[193]);
 
-    this->pf = ucharToShort(&recvBuffer[205]);
+    this->pf = ucharToShort(&recvBuffer[205])*10;
 
     this->fault[1] = ucharToShort(&recvBuffer[211]);
     this->fault[2] = ucharToShort(&recvBuffer[213]);

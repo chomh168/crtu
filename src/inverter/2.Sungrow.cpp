@@ -14,9 +14,9 @@ InverterSungrow::InverterSungrow(short invno) : InverterBase(invno) {
 
 void InverterSungrow::decodePacket(unsigned char* recvBuffer, int sendPacketCount){
     if(recvBuffer[2] == this->packetSendLength[0] * 2){
-        this->dayTotal = ucharToShort(&recvBuffer[3])/10;
+        this->dayTotal = ucharToShort(&recvBuffer[3]);
         this->total = ucharToUint(&recvBuffer[5]);
-        this->invTemp = ucharToShort(&recvBuffer[13])/10;
+        this->invTemp = ucharToShort(&recvBuffer[13]);
 
         this->dcvs[0] = ucharToShort(&recvBuffer[19]);
         this->dcas[0] = ucharToShort(&recvBuffer[21]);
@@ -26,21 +26,21 @@ void InverterSungrow::decodePacket(unsigned char* recvBuffer, int sendPacketCoun
         this->dcas[2] = ucharToShort(&recvBuffer[29]);
 
         int dckw = ucharToUint(&recvBuffer[31]);
-        this->dckw = (short)(dckw/1000);
+        this->dckw = (short)(dckw/100);
 
-        this->acvr = ucharToShort(&recvBuffer[35])/10;
-        this->acvs = ucharToShort(&recvBuffer[37])/10;
-        this->acvt = ucharToShort(&recvBuffer[39])/10;
+        this->acvr = ucharToShort(&recvBuffer[35]);
+        this->acvs = ucharToShort(&recvBuffer[37]);
+        this->acvt = ucharToShort(&recvBuffer[39]);
 
-        this->acas = ucharToShort(&recvBuffer[41])/10;
-        this->acas = ucharToShort(&recvBuffer[43])/10;
-        this->acas = ucharToShort(&recvBuffer[45])/10;
+        this->acas = ucharToShort(&recvBuffer[41]);
+        this->acas = ucharToShort(&recvBuffer[43]);
+        this->acas = ucharToShort(&recvBuffer[45]);
 
         int ackw = ucharToUint(&recvBuffer[59]);
-        this->ackw = (short)(ackw/1000);
+        this->ackw = (short)(ackw/100);
 
-        this->pf = ucharToShort(&recvBuffer[67])/1000;
-        this->freq = ucharToShort(&recvBuffer[69])/10;
+        this->pf = ucharToShort(&recvBuffer[67])/100;
+        this->freq = ucharToShort(&recvBuffer[69]);
 
         // Work state
         this->fault[0] = ucharToShort(&recvBuffer[73]);
@@ -71,8 +71,8 @@ void InverterSungrow::decodePacket(unsigned char* recvBuffer, int sendPacketCoun
         dcas[10] = ucharToShort(&recvBuffer[43]);
         dcas[11] = ucharToShort(&recvBuffer[47]);
 
-        this->dcv = *max_element(this->dcvs, this->dcvs + 12)/10;
-        this->dca = accumulate(this->dcas, this->dcas + 12, 0)/10;
+        this->dcv = *max_element(this->dcvs, this->dcvs + 12);
+        this->dca = accumulate(this->dcas, this->dcas + 12, 0);
     }
 }
 
