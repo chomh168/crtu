@@ -7,9 +7,9 @@ InverterSungrow::InverterSungrow(short invno) : InverterBase(invno) {
     this->setSerializeLength(42);
     this->packetLength = 8;
     this->packetSendLength[0] = 80;
-    this->sendPacketList.push_back(this->makeModbusSendPacket(3, 5003, this->packetSendLength[0]));
+    this->sendPacketList.push_back(this->makeModbusSendPacket(3, 5003 - 1, this->packetSendLength[0]));
     this->packetSendLength[1] = 23;
-    this->sendPacketList.push_back(this->makeModbusSendPacket(3, 5115, this->packetSendLength[1]));
+    this->sendPacketList.push_back(this->makeModbusSendPacket(3, 5115 - 1, this->packetSendLength[1]));
 }
 
 void InverterSungrow::decodePacket(unsigned char* recvBuffer, int sendPacketCount){
