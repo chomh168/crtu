@@ -195,8 +195,8 @@ int main() {
 	spi_ini_dot();
 	i2c_ini_dot();
 	adc_ini_crtu();
-	load_eep_page();
-	load_eep_server();
+	// load_eep_page();
+	// load_eep_server();
 	cdcd_init();
 
 	init_inverter();
@@ -268,10 +268,9 @@ void print_display(){
 	static int displayDelay = 0;
 	static int phase = 0;
 	
-	if((gSysCnt - displayDelay) < 5000) return; // || vibCheck == false
-	// if((gSysCnt - displayDelay) >= 5000 || vibCheck){
-		displayDelay = gSysCnt;
-
+	if((gSysCnt - displayDelay) < 1000) return; // || vibCheck == false
+	displayDelay = gSysCnt;
+	gfLcdRefash = 1;
 		// Paint_DrawString_EN(50, 10, "TEST", &Font12, 0x1, 0xb);
 		// Paint_DrawString_EN(10, 10, datetime, &Font12, 0x1, 0xb);
 	// }
@@ -340,7 +339,6 @@ void send_iot_count(){
 	static bool firstSend = true;
 	
 	if((gSysCnt - sendServerDelay) < 1000) return;
-	gfLcdRefash = 1;
 	sendServerDelay = gSysCnt;
 	sendCount++;
 	if(sendCount > 60 && firstSend){
@@ -445,6 +443,14 @@ void set_send_inv_packet(){
 }
 
 void init_inverter(){
+	ee.PortNumber = 5;
+	ee.InverterCount = 3;
+	ee.eeModelInverters[0] = 7;
+	ee.eeModelInverterIds[0] = 1;
+	ee.eeModelInverters[1] = 7;
+	ee.eeModelInverterIds[1] = 2;
+	ee.eeModelInverters[2] = 7;
+	ee.eeModelInverterIds[2] = 3;
 	for(int i = 0 ; i < ee.InverterCount ; i++){
 		int key = ee.eeModelInverters[i] * 100 + ee.eeModelInverterIds[i];
 		inverters[key] = getInverterInstance(ee.eeModelInverters[i], ee.eeModelInverterIds[i]);

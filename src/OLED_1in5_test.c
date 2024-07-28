@@ -403,8 +403,16 @@ extern void drv_lcd_1in5_oled(void){
 			break;
 		case 11:
 			gfLcdRefash = 0;
-			Paint_DrawNum(30, 70, count++, &Font12, 5, 0x4, 0xe);
-			flcd_refrash();
+			Paint_DrawNum(0, 0, count++, &Font12, 5, 1, 0);
+			Paint_DrawNum(10, 10, count++, &Font12, 5, 1, 0);
+			Paint_DrawNum(20, 20, count++, &Font12, 5, 1, 0);
+			Paint_DrawNum(30, 30, count++, &Font12, 5, 1, 0);
+			Paint_DrawNum(40, 40, count++, &Font12, 5, 1, 0);
+			Paint_DrawNum(50, 50, count++, &Font12, 5, 1, 0);
+			Paint_DrawNum(60, 60, count++, &Font12, 5, 1, 0);
+			Paint_DrawNum(70, 70, count++, &Font12, 5, 1, 0);
+			// flcd_refrash();
+			OLED_1in5_Display_test(BlackImage);
 			sDlSqc = 10; 
 			break;
 		case 12:
