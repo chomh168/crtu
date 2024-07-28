@@ -375,6 +375,9 @@ void recv_inv_raw_packet(){
 				if(nowInverter->isValidRecvPacket(invBuffer, invIndex)){
 					nowInverter->decodePacket(invBuffer, sendPacketCount);
 					printf("ACKW - %d", nowInverter->ackw);
+					printf("DCKW - %d", nowInverter->dckw);
+					printf("DCV - %d", nowInverter->dcv);
+					printf("DCA - %d", nowInverter->dca);
 					nowInverter->setRecvOk(true);
 					nowInverter->setValid(true);
 					//rx display
