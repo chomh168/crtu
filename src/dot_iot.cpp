@@ -802,6 +802,7 @@ void makeIotPacketLTE(){
     strcat(txdataIot, buf);
   }
   strcat(txdataIot, "\r\n");
+  printf("send - %s", txdataIot);
   memset(serverCharBody, 0, sizeof(serverCharBody));
 }
 
