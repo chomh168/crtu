@@ -360,13 +360,6 @@ void set_trigger(){
 	trigger = true;
 }
 
-void printHexArray(const unsigned char* array, size_t length) {
-    for (size_t i = 0; i < length; ++i) {
-        printf("%02X ", array[i]); // 각 바이트를 2자리 16진수로 출력
-    }
-    printf("\n");
-}
-
 void recv_inv_raw_packet(){
 	static bool isValid = false;
 	static int invIndex = 0;
@@ -381,7 +374,7 @@ void recv_inv_raw_packet(){
 			if (invIndex == length + 5) {
 				if(nowInverter->isValidRecvPacket(invBuffer, invIndex)){
 					nowInverter->decodePacket(invBuffer, sendPacketCount);
-					printHexArray(invBuffer, invIndex);
+					printf("ACKW - %d", nowInverter->ackw);
 					nowInverter->setRecvOk(true);
 					nowInverter->setValid(true);
 					//rx display
