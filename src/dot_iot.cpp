@@ -404,6 +404,7 @@ unsigned char Cmd_judge(char* dest) {
     load_eep_server();
     printf("port : %d /", serverinfo.serverPort);
     printf("domain - %s", serverinfo.serverDomain);
+    printf("ps id - %d / count - %d", uEepv.su.eePortNumber, uEepv.su.eeInverterCount);
     // gFlcdIni = 1;
     break;
   case 28:
@@ -1394,7 +1395,7 @@ ui16 msg_send_2_iot_LTE(bool& init) {
   if (iotSendSw & bv(TCPSENDDATA_ICF)) {
     switch (sub_sqc) {
     case 0:
-      if (serverinfo.serverPort > 0) sprintf(txdataIot, "AT+WSOCR=0,%s,%d,1,1\r\n", serverinfo.serverDomain, serverinfo.serverPort);
+      if (serverinfo.serverPort > 0 && serverinfo.serverPort != 65535) sprintf(txdataIot, "AT+WSOCR=0,%s,%d,1,1\r\n", serverinfo.serverDomain, serverinfo.serverPort);
       else sprintf(txdataIot, "AT+WSOCR=0,chomh168.iptime.org,8124,1,1\r\n");
       my_puts_string(ToIot);
       sub_sqc = 1;

@@ -60,15 +60,17 @@ short ucharToShort(unsigned char* recvBuffer, bool reverse){
 
 unsigned int ucharToUint(unsigned char* recvBuffer, bool reverse){
     unsigned int result = 0;
-    result += recvBuffer[0] * 0x1000000;
-    result += recvBuffer[1] * 0x10000;
-    result += recvBuffer[2] * 0x100;
-    result += recvBuffer[3] * 0x1;
     if (reverse) {
         result += recvBuffer[2] * 0x1000000;
         result += recvBuffer[3] * 0x10000;
         result += recvBuffer[0] * 0x100;
         result += recvBuffer[1] * 0x1;
+    }
+    else{
+        result += recvBuffer[0] * 0x1000000;
+        result += recvBuffer[1] * 0x10000;
+        result += recvBuffer[2] * 0x100;
+        result += recvBuffer[3] * 0x1;
     }
     return result;
 }

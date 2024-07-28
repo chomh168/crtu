@@ -195,8 +195,8 @@ int main() {
 	spi_ini_dot();
 	i2c_ini_dot();
 	adc_ini_crtu();
-	// load_eep_page();
-	// load_eep_server();
+	load_eep_page();
+	load_eep_server();
 	cdcd_init();
 
 	init_inverter();
@@ -369,7 +369,9 @@ void recv_inv_raw_packet(){
 		char raw = getchar1_h();
 		if (isValid){
 			if (invIndex == 1 && (raw != 3 && raw != 4)) isValid = false;
-			if (invIndex == 2) length = raw;
+			if (invIndex == 2) {
+				length = raw;
+			}
 			invBuffer[invIndex++] = raw;
 			if (invIndex == length + 5) {
 				if(nowInverter->isValidRecvPacket(invBuffer, invIndex)){
@@ -382,6 +384,7 @@ void recv_inv_raw_packet(){
 					printf("DCA - %d", nowInverter->dca);
 					nowInverter->setRecvOk(true);
 					nowInverter->setValid(true);
+					sendPacketCount++;
 					//rx display
 				}
 				isValid = false;
@@ -420,6 +423,7 @@ void check_delay_inv(){
 	if(delayCount > 2) {
 		isInvResponseDelay = true;
 		delayCount = 0;
+		sendPacketCount++;
 	}
 	else {
 		set_send_packet_txdataInv();
@@ -431,7 +435,6 @@ void set_send_inv_packet(){
 	if (nowInverter->getRecvOk() == true || isInvResponseDelay == true){
 		invResponseDelay = gSysCnt;
 		set_send_packet_txdataInv();
-		sendPacketCount++;
 		// tx display
 
 		invResponseDelay = gSysCnt; 
@@ -449,14 +452,16 @@ void set_send_inv_packet(){
 }
 
 void init_inverter(){
-	ee.PortNumber = 5;
-	ee.InverterCount = 3;
-	ee.eeModelInverters[0] = 7;
-	ee.eeModelInverterIds[0] = 1;
-	ee.eeModelInverters[1] = 7;
-	ee.eeModelInverterIds[1] = 2;
-	ee.eeModelInverters[2] = 7;
-	ee.eeModelInverterIds[2] = 3;
+	if(ee.PortNumber == -1){
+		ee.PortNumber = 99999999;
+		ee.InverterCount = 3;
+		ee.eeModelInverters[0] = 7;
+		ee.eeModelInverterIds[0] = 1;
+		ee.eeModelInverters[1] = 7;
+		ee.eeModelInverterIds[1] = 2;
+		ee.eeModelInverters[2] = 7;
+		ee.eeModelInverterIds[2] = 3;
+	}
 	for(int i = 0 ; i < ee.InverterCount ; i++){
 		int key = ee.eeModelInverters[i] * 100 + ee.eeModelInverterIds[i];
 		inverters[key] = getInverterInstance(ee.eeModelInverters[i], ee.eeModelInverterIds[i]);

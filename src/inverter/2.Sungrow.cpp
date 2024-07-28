@@ -15,7 +15,7 @@ InverterSungrow::InverterSungrow(short invno) : InverterBase(invno) {
 void InverterSungrow::decodePacket(unsigned char* recvBuffer, int sendPacketCount){
     if(recvBuffer[2] == this->packetSendLength[0] * 2){
         this->dayTotal = ucharToShort(&recvBuffer[3]);
-        this->total = ucharToUint(&recvBuffer[5]);
+        this->total = ucharToUint(&recvBuffer[5], true);
         this->invTemp = ucharToShort(&recvBuffer[13]);
 
         this->dcvs[0] = ucharToShort(&recvBuffer[19]);
@@ -25,18 +25,18 @@ void InverterSungrow::decodePacket(unsigned char* recvBuffer, int sendPacketCoun
         this->dcvs[2] = ucharToShort(&recvBuffer[27]);
         this->dcas[2] = ucharToShort(&recvBuffer[29]);
 
-        int dckw = ucharToUint(&recvBuffer[31]);
+        int dckw = ucharToUint(&recvBuffer[31], true);
         this->dckw = (short)(dckw/100);
 
         this->acvr = ucharToShort(&recvBuffer[35]);
         this->acvs = ucharToShort(&recvBuffer[37]);
         this->acvt = ucharToShort(&recvBuffer[39]);
 
-        this->acas = ucharToShort(&recvBuffer[41]);
+        this->acar = ucharToShort(&recvBuffer[41]);
         this->acas = ucharToShort(&recvBuffer[43]);
-        this->acas = ucharToShort(&recvBuffer[45]);
+        this->acat = ucharToShort(&recvBuffer[45]);
 
-        int ackw = ucharToUint(&recvBuffer[59]);
+        int ackw = ucharToUint(&recvBuffer[59], true);
         this->ackw = (short)(ackw/100);
 
         this->pf = ucharToShort(&recvBuffer[67])/100;
