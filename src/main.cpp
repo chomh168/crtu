@@ -271,6 +271,7 @@ void print_display(){
 	if((gSysCnt - displayDelay) < 1000) return; // || vibCheck == false
 	displayDelay = gSysCnt;
 	gfLcdRefash = 1;
+	
 		// Paint_DrawString_EN(50, 10, "TEST", &Font12, 0x1, 0xb);
 		// Paint_DrawString_EN(10, 10, datetime, &Font12, 0x1, 0xb);
 	// }
