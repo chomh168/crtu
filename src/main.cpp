@@ -454,7 +454,7 @@ void set_send_inv_packet(){
 void init_inverter(){
 	if(ee.PortNumber == -1){
 		ee.PortNumber = 99999999;
-		ee.InverterCount = 1;
+		ee.InverterCount = 3;
 		ee.eeModelInverters[0] = 7;
 		ee.eeModelInverterIds[0] = 1;
 		ee.eeModelInverters[1] = 7;
