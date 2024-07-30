@@ -100,6 +100,19 @@ short hexStringToShort(const char* hexString) {
     return (short)value;
 }
 
+short stringToShort(const char* string, int length) {
+    char buffer[6] = {0};
+
+    // Copy at most 4 characters from the input string to the buffer
+    strncpy(buffer, string, length);
+    long value = strtol(buffer, NULL, 16);
+    if (value < 0 || value > 65535) {
+        printf("Value out of range for short: %ld\n", value);
+        return 0;
+    }
+    return (short)value;
+}
+
 vector<string> split(const char* str, char delimiter) {
     vector<string> result;
     const char* start = str;
