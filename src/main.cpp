@@ -46,8 +46,7 @@ void vib_check(void);
 void black_out_check(void);
 void pwrsw_check(void);
 void init_inverter(void);
-void check_delay_inv(void);
-void set_send_inv_packet(void);
+void send_inv_packet(void);
 void recv_inv_raw_packet(void);
 void send_iot_count(void);
 void setTriggerSever(void);
@@ -151,8 +150,6 @@ vector<int> inverterKeys;
 int sendPacketCount;
 int keyIndex;
 int preBuadRate;
-bool isInvResponseDelay = false;
-int invResponseDelay;
 unsigned char invBuffer[0xff];
 char serverCharBody[1024] = {0};
 map<short,vector<char>> serverBody;
@@ -255,8 +252,7 @@ int main() {
 		drv_adc_internal();
 		drv_eep_at24c128();
 		drv_lcd_1in5_oled();
-		set_send_inv_packet();
-		check_delay_inv();
+		send_inv_packet();
 		opr_send485tx();
 		recv_inv_raw_packet();
 		send_iot_count();
@@ -322,10 +318,10 @@ int getCurrentBodyPacket(){
 	}
 	
 	if(bodyIt->first < 0){
-		makeSendHeaderPacket(bodyIt->second.size(), CLIENT_ERROR, bodyIt->first * -1, bodyIt->second.size() / 2);
+		makeSendHeaderPacket(bodyIt->second.size() + 6, CLIENT_ERROR, bodyIt->first * -1, bodyIt->second.size() / 2);
 	}
 	else{
-		makeSendHeaderPacket(bodyIt->second.size(), CLIENT_INVERTER, bodyIt->first, bodyIt->second.size() / modelSerializeLength[bodyIt->first]);
+		makeSendHeaderPacket(bodyIt->second.size() + 6, CLIENT_INVERTER, bodyIt->first, bodyIt->second.size() / modelSerializeLength[bodyIt->first]);
 	}
 	
 	bodyIt->second.insert(bodyIt->second.begin(), serverHeader, serverHeader + 14);
@@ -420,37 +416,25 @@ void set_send_packet_txdataInv(){
 	txdataInv[0] = length;
 	copy(sendPacket, sendPacket + length, txdataInv + 1);
 	sendReactionTriger = 1;
-	// printf("invno - %d : ", nowInverter->invno);
-	// printHexArray(sendPacket, length);
+	printf("invno - %d : ", nowInverter->invno);
+	printHexArray(sendPacket, length);
 }
 
-void check_delay_inv(){
+void send_inv_packet(){
 	static int delayCount = 0;
+	static bool isInvResponseDelay = false;
+	static int invResponseDelay;
 
 	if((gSysCnt - invResponseDelay) < 1000) return;
 	invResponseDelay = gSysCnt;
-	delayCount++;
-
-	if(delayCount > 2) {
-		isInvResponseDelay = true;
-		delayCount = 0;
-		sendPacketCount++;
-	}
-	else {
-		set_send_packet_txdataInv();
-	}
-}
-
-void set_send_inv_packet(){
-	if((gSysCnt - invResponseDelay) < 1000) return;
 	if (nowInverter->getRecvOk() == true || isInvResponseDelay == true){
-		invResponseDelay = gSysCnt;
 		set_send_packet_txdataInv();
 		// tx display
 
 		invResponseDelay = gSysCnt; 
 		isInvResponseDelay = false;
 		nowInverter->setRecvOk(false);
+		delayCount = 0;
 		
 		if (nowInverter->getSendPacketList().size() == sendPacketCount){
 			sendPacketCount = 0;
@@ -458,6 +442,18 @@ void set_send_inv_packet(){
 			else keyIndex++;
 			nowInverter = inverters[inverterKeys[keyIndex]];
 			if(preBuadRate != nowInverter->getBaudRate()) uart_set_baudrate(UART_ID_1, nowInverter->getBaudRate());
+		}
+	}
+	else{
+		delayCount++;
+
+		if(delayCount > 3) {
+			isInvResponseDelay = true;
+			sendPacketCount++;
+			delayCount = 0;
+		}
+		else {
+			set_send_packet_txdataInv();
 		}
 	}
 }
