@@ -444,7 +444,6 @@ unsigned char Cmd_judge(char* dest) {
     printf("nowlora_reset...");
     break;
   case 34:
-    printf("ERROR 34");
     recvError = true;
     break;
   case 35:
@@ -456,10 +455,10 @@ unsigned char Cmd_judge(char* dest) {
     break;
   case 36: //SERVER
     strncpy(cmd_buf, subval_addr, 100);
-    serverCode = charsToInt(cmd_buf[9], cmd_buf[10]);
+    serverCode = hexStringToShort(&cmd_buf[16]);
     if (serverCode == SERVER_ACK) {//SERVER_ACK
       sbi(iotState, WSOREAD_STIOT); // count
-      printf("server ACK %d\r\n", (iotState & bv(WSOREAD_STIOT)));
+      printf("server ACK\r\n");
     } 
     else if (serverCode == SERVER_RESET) {
       sbi(gResetSw, SYSTEM_RSW);
@@ -1396,7 +1395,8 @@ ui16 msg_send_2_iot_LTE(bool& init) {
     switch (sub_sqc) {
     case 0:
       if (serverinfo.serverPort > 0 && serverinfo.serverPort != 65535) sprintf(txdataIot, "AT+WSOCR=0,%s,%d,1,1\r\n", serverinfo.serverDomain, serverinfo.serverPort);
-      else sprintf(txdataIot, "AT+WSOCR=0,chomh168.iptime.org,8124,1,1\r\n");
+      // else sprintf(txdataIot, "AT+WSOCR=0,chomh168.iptime.org,8124,1,1\r\n");
+      else sprintf(txdataIot, "AT+WSOCR=0,tcp-bridge.sm-electric.kr,19000,1,1\r\n");
       my_puts_string(ToIot);
       sub_sqc = 1;
       wait_time = 1;

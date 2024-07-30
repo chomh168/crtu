@@ -87,16 +87,17 @@ void setCharArrayByInt(char* arr, int value, int byte) {
     }
 }
 
-int charsToInt(char tens, char ones) {
-  if (isdigit(tens) && isdigit(ones)) {
-    int tensDigit = tens - '0';
-    int onesDigit = ones - '0';
+short hexStringToShort(const char* hexString) {
+    char buffer[5] = {0};
 
-    return tensDigit * 0x10 + onesDigit;
-  } else {
-    printf("Error: Non-digit character input");
-    return -1;
-  }
+    // Copy at most 4 characters from the input string to the buffer
+    strncpy(buffer, hexString, 4);
+    long value = strtol(buffer, NULL, 16);
+    if (value < 0 || value > 65535) {
+        printf("Value out of range for short: %ld\n", value);
+        return 0;
+    }
+    return (short)value;
 }
 
 vector<string> split(const char* str, char delimiter) {

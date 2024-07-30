@@ -362,6 +362,13 @@ void set_trigger(){
 	trigger = true;
 }
 
+void printHexArray(unsigned char* arr, size_t length) {
+    for (size_t i = 0; i < length; ++i) {
+        printf("%02X ", arr[i]);
+    }
+    printf("\n\n");
+}
+
 void recv_inv_raw_packet(){
 	static bool isValid = false;
 	static int invIndex = 0;
@@ -413,6 +420,8 @@ void set_send_packet_txdataInv(){
 	txdataInv[0] = length;
 	copy(sendPacket, sendPacket + length, txdataInv + 1);
 	sendReactionTriger = 1;
+	// printf("invno - %d : ", nowInverter->invno);
+	// printHexArray(sendPacket, length);
 }
 
 void check_delay_inv(){
@@ -455,7 +464,7 @@ void set_send_inv_packet(){
 
 void init_inverter(){
 	if(ee.PortNumber == -1){
-		ee.PortNumber = 99999999;
+		ee.PortNumber = 10;
 		ee.InverterCount = 3;
 		ee.eeModelInverters[0] = 7;
 		ee.eeModelInverterIds[0] = 1;
