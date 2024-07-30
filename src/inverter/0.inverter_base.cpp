@@ -46,6 +46,10 @@ void InverterBase::clearBaseValue(bool totalReset){
     }
 }
 
+void InverterBase::clearDayTotal(){
+    this->dayTotal = 0;
+}
+
 vector<unsigned char*> InverterBase::getSendPacketList(){
     return this->sendPacketList;
 }

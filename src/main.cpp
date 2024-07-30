@@ -268,20 +268,21 @@ void print_display(){
 	static int displayDelay = 0;
 	static int phase = 0;
 	
-	if((gSysCnt - displayDelay) < 1000) return; // || vibCheck == false
-	displayDelay = gSysCnt;
-	gfLcdRefash = 1;
-	
-		// Paint_DrawString_EN(50, 10, "TEST", &Font12, 0x1, 0xb);
-		// Paint_DrawString_EN(10, 10, datetime, &Font12, 0x1, 0xb);
-	// }
-
+	if((gSysCnt - displayDelay) < 3000) {
+		displayDelay = gSysCnt;
+		return;
+	}
+	else if(vibCheck == true){
+		displayDelay = gSysCnt;
+		gfLcdRefash = 1;
+	}
 }
 
 int makeSendBodyPacket(){
 	serverBody.clear();
 	for (const auto& pair : inverters) {
 		if(pair.second->getValid()){
+			if(datetime[6]=='0' && datetime[7]=='0')pair.second->clearDayTotal();
 			unsigned char* serialPacket = pair.second->serialize();
 			auto body = serverBody[pair.second->getModel()];
 			body.insert(body.end(), serialPacket, serialPacket + pair.second->getSerializeLength());
@@ -377,12 +378,12 @@ void recv_inv_raw_packet(){
 			if (invIndex == length + 5) {
 				if(nowInverter->isValidRecvPacket(invBuffer, invIndex)){
 					nowInverter->decodePacket(invBuffer, sendPacketCount);
-					printf("ACKW - %d", nowInverter->ackw);
-					printf("ACVR - %d", nowInverter->acvr);
-					printf("ACAR - %d", nowInverter->acar);
-					printf("DCKW - %d", nowInverter->dckw);
-					printf("DCV - %d", nowInverter->dcv);
-					printf("DCA - %d", nowInverter->dca);
+					// printf("ACKW - %d", nowInverter->ackw);
+					// printf("ACVR - %d", nowInverter->acvr);
+					// printf("ACAR - %d", nowInverter->acar);
+					// printf("DCKW - %d", nowInverter->dckw);
+					// printf("DCV - %d", nowInverter->dcv);
+					// printf("DCA - %d", nowInverter->dca);
 					nowInverter->setRecvOk(true);
 					nowInverter->setValid(true);
 					sendPacketCount++;
@@ -795,6 +796,7 @@ void drv_adc_internal(void){
 			adc_gpio_init(26);
 			adc_gpio_init(27);
 			adc_gpio_init(28);
+			gpio_pull_up(28);
 		break;
 
 	}

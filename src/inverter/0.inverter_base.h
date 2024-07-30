@@ -48,6 +48,7 @@ public:
     unsigned char* makeModbusSendPacket(int func, int start, int count);
     vector<unsigned char*> getSendPacketList();
     void clearBaseValue(bool totalReset);
+    void clearDayTotal();
     bool getRecvOk();
     void setRecvOk(bool recvOk);
     int getBaudRate();

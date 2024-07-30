@@ -45,7 +45,7 @@ char* frompccmd_str_m2m[MAX_NUM_FROMPCCMD] = {
   "+CMGR: ", //	18    
   "*SMSALERT", //	19    
   "+QIRD: ", //	20    
-  "+CCLK: ", //	21  -- comm 
+  "+CCLK: \"", //	21  -- comm 
   "OK", // 22
   "$save", // 23
   "$load", //  24
