@@ -51,9 +51,9 @@ extern void OLED_1in5_Display(UBYTE *Image);
 void drv_lcd_1in5_oled(void);
 void flcd_refrash(void);
 extern char datetime[30];
-char OLED_CAHR[10][20];
+char OLED_CHAR[10][20];
 bool OLED_REFRESH[20];
-char* version = "VER.240729";
+char* version = "V.240729";
 
 
 void DEV_SPI_WriteByte(uint8_t Value)
@@ -382,10 +382,14 @@ extern void drv_lcd_1in5_oled(void){
 			// Paint_DrawString_EN(10, 92, "soul_energy", &Font16, 0x2, 0xc);
 			// Paint_DrawNum(10, 100, 123.456789, &Font8, 4, 0x3, 0xd);
 			// Paint_DrawNum(10, 116, 987654, &Font12, 5, 0x4, 0xe);
-			Paint_DrawNum(30, 70, count++, &Font12, 5, 0x4, 0xe);
-			Paint_DrawString_EN(50, 10, datetime, &Font12, 0, 0x1);
-			Paint_DrawString_EN(10, 10, "TEST", &Font12, 0x1, 0xb);
-	
+			// Paint_DrawNum(30, 70, count++, &Font12, 5, 0x4, 0xe);
+			// Paint_DrawString_EN(50, 10, datetime, &Font12, 0, 0x1);
+			// Paint_DrawString_EN(10, 10, "TEST", &Font12, 0x1, 0xb);
+			// sprintf(OLED_CAHR[0],"%s",version);
+			Paint_DrawString_EN(0, 0, version, &Font12, 0, 1);
+			Paint_DrawString_EN(0, 10, "PS ID : ", &Font12, 0, 1);
+			Paint_DrawString_EN(7*9, 10, OLED_CHAR[0], &Font12, 0, 1);
+			Paint_DrawString_EN(0, 20, "------------------", &Font12, 0, 1);
 			// Show image on page2
 			OLED_1in5_Display_test(BlackImage);
 			cnt = gSysCnt;
@@ -403,18 +407,22 @@ extern void drv_lcd_1in5_oled(void){
 			break;
 		case 11:
 			gfLcdRefash = 0;
-			Paint_DrawString_EN(0, 0, OLED_CAHR[0], &Font12, 1, 0);
+			
+			
+			// Paint_DrawString_EN(0, 20, "012345678901234567", &Font12, 1, 0);
+			
 			// Paint_DrawNum(0, 0, count++, &Font12, 1, 1, 0);
-			Paint_DrawNum(0, 10, count++, &Font12, 1, 1, 0);
-			Paint_DrawNum(0, 20, count++, &Font12, 1, 1, 0);
-			Paint_DrawNum(0, 30, count++, &Font12, 1, 1, 0);
-			Paint_DrawNum(0, 40, count++, &Font12, 1, 1, 0);
-			Paint_DrawNum(0, 50, count++, &Font12, 1, 1, 0);
+			// Paint_DrawNum(0, 10, 1234567890123456789, &Font12, 0, 1, 0);
+			// Paint_DrawNum(0, 20, count++, &Font12, 0, 1, 0);
+			Paint_DrawNum(0, 30, count++, &Font12, 0, 1, 0);
+			Paint_DrawNum(0, 40, count++, &Font12, 0, 1, 0);
+			Paint_DrawNum(0, 50, count++, &Font12, 0, 1, 0);
 			Paint_DrawNum(0, 60, count++, &Font12, 1, 1, 0);
 			Paint_DrawNum(0, 70, count++, &Font12, 1, 1, 0);
 			Paint_DrawNum(0, 80, count++, &Font12, 1, 1, 0);
 			Paint_DrawNum(0, 90, count++, &Font12, 1, 1, 0);
 			Paint_DrawNum(0, 100, count++, &Font12, 1, 1, 0);
+			Paint_DrawNum(0, 110, count++, &Font12, 1, 1, 0);
 			// flcd_refrash();
 			OLED_1in5_Display_test(BlackImage);
 			sDlSqc = 10; 

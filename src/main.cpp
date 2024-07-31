@@ -159,6 +159,7 @@ bool trigger = false;
 extern see ee;
 bool vibCheck = false;
 extern char datetime[30];
+extern char OLED_CHAR[10][20];
  
 int main() {
 #ifndef PICO_DEFAULT_LED_PIN
@@ -265,10 +266,13 @@ void print_display(){
 	static int phase = 0;
 	
 	if((gSysCnt - displayDelay) < 3000) {
-		displayDelay = gSysCnt;
 		return;
 	}
 	else if(vibCheck == true){
+		displayDelay = gSysCnt;
+		gfLcdRefash = 1;
+	}
+	else{
 		displayDelay = gSysCnt;
 		gfLcdRefash = 1;
 	}
@@ -278,6 +282,7 @@ int makeSendBodyPacket(){
 	serverBody.clear();
 	for (const auto& pair : inverters) {
 		if(pair.second->getValid()){
+			// printf("inv - %d \n",pair.first);
 			if(datetime[6]=='0' && datetime[7]=='0')pair.second->clearDayTotal();
 			unsigned char* serialPacket = pair.second->serialize();
 			auto body = serverBody[pair.second->getModel()];
@@ -380,16 +385,11 @@ void recv_inv_raw_packet(){
 			invBuffer[invIndex++] = raw;
 			if (invIndex == length + 5) {
 				if(nowInverter->isValidRecvPacket(invBuffer, invIndex)){
-					nowInverter->decodePacket(invBuffer, sendPacketCount);
-					// printf("ACKW - %d", nowInverter->ackw);
-					// printf("ACVR - %d", nowInverter->acvr);
-					// printf("ACAR - %d", nowInverter->acar);
-					// printf("DCKW - %d", nowInverter->dckw);
-					// printf("DCV - %d", nowInverter->dcv);
-					// printf("DCA - %d", nowInverter->dca);
 					nowInverter->setRecvOk(true);
 					nowInverter->setValid(true);
+					nowInverter->decodePacket(invBuffer, sendPacketCount);
 					sendPacketCount++;
+					// printf("invno - %d", nowInverter->invno);
 					//rx display
 				}
 				isValid = false;
@@ -428,10 +428,6 @@ void send_inv_packet(){
 	if((gSysCnt - invResponseDelay) < 1000) return;
 	invResponseDelay = gSysCnt;
 	if (nowInverter->getRecvOk() == true || isInvResponseDelay == true){
-		set_send_packet_txdataInv();
-		// tx display
-
-		invResponseDelay = gSysCnt; 
 		isInvResponseDelay = false;
 		nowInverter->setRecvOk(false);
 		delayCount = 0;
@@ -443,6 +439,8 @@ void send_inv_packet(){
 			nowInverter = inverters[inverterKeys[keyIndex]];
 			if(preBuadRate != nowInverter->getBaudRate()) uart_set_baudrate(UART_ID_1, nowInverter->getBaudRate());
 		}
+		set_send_packet_txdataInv();
+		// tx display
 	}
 	else{
 		delayCount++;
@@ -460,17 +458,21 @@ void send_inv_packet(){
 
 void init_inverter(){
 	if(ee.PortNumber == -1){
-		ee.PortNumber = 10;
-		ee.InverterCount = 3;
+		ee.PortNumber = 99999999;
+		ee.InverterCount = 1;
 		ee.eeModelInverters[0] = 7;
 		ee.eeModelInverterIds[0] = 1;
-		ee.eeModelInverters[1] = 7;
+		ee.eeModelInverters[1] = 5;
 		ee.eeModelInverterIds[1] = 2;
-		ee.eeModelInverters[2] = 7;
+		ee.eeModelInverters[2] = 5;
 		ee.eeModelInverterIds[2] = 3;
 	}
+	sprintf(OLED_CHAR[0],"%d",ee.PortNumber);
 	for(int i = 0 ; i < ee.InverterCount ; i++){
 		int key = ee.eeModelInverters[i] * 100 + ee.eeModelInverterIds[i];
+		InverterBase* inverterBase = getInverterInstance(ee.eeModelInverters[i], ee.eeModelInverterIds[i]);
+		if (inverterBase == nullptr) continue;
+		inverters[key] = inverterBase;
 		inverters[key] = getInverterInstance(ee.eeModelInverters[i], ee.eeModelInverterIds[i]);
 		inverters[key]->clearValue(true);
 		inverters[key]->setValid(false);
