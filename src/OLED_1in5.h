@@ -47,7 +47,7 @@ void OLED_1in5_Init(void);
 void OLED_1in5_Clear(void);
 void OLED_1in5_Display(UBYTE *Image);
 
-extern char gfLcdRefash;
+extern char gfLcdRefresh;
 extern ui16 gflcdsleep_n;
 
 

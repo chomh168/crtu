@@ -2,6 +2,7 @@
 #include "util/util.h"
 #include "dot_iot.h"
 #include "dot_flash.h"
+#include "OLED_1in5.h"
 
 
 enum HS_CMD {
@@ -92,6 +93,7 @@ extern ui16 gflcdsleep_n;
 extern char serverCharBody[1024];
 extern int gfBlackOut;
 extern float gNowtemp; 
+extern char OLED_CHAR[12][18];
 
 int rssiLevel = 0;
 int nowCount = 0;
@@ -220,6 +222,8 @@ unsigned char Cmd_judge(char* dest) {
     //----------
     sbi(iotState, CSQUERY_STIOT);
     sprintf(dbgSendbuf, "mCSQ->%d", rssiLevel);
+    sprintf(OLED_CHAR[6],"CSQ:%02d",rssiLevel);
+    gfLcdRefresh = 1;
     my_puts_string(dbgSndPort);
     break;
   case 4:
@@ -299,11 +303,14 @@ unsigned char Cmd_judge(char* dest) {
   case 12:
     strncpy(cmd_buf, subval_addr, 30);
     if(strstr(cmd_buf, "OPEN_CMPL") != nullptr){ 
+      sprintf(OLED_CHAR[11],"OP.CMPL");
+      gfLcdRefresh = 1;
       sbi(iotState, WSOCOPEN_STIOT);
       bRxOk = 1;
     }
     else if(strstr(cmd_buf, "1,0,OPEN_WAIT") != nullptr){
-      
+      sprintf(OLED_CHAR[11],"OP.WAIT");
+      gfLcdRefresh = 1;
     }
     else{
       
@@ -445,6 +452,8 @@ unsigned char Cmd_judge(char* dest) {
     break;
   case 34:
     recvError = true;
+    sprintf(OLED_CHAR[11],"ERROR  ");
+    gfLcdRefresh = 1;
     break;
   case 35:
     strncpy(cmd_buf, subval_addr, 10);
@@ -459,6 +468,8 @@ unsigned char Cmd_judge(char* dest) {
     if (serverCode == SERVER_ACK) {//SERVER_ACK
       sbi(iotState, WSOREAD_STIOT); // count
       printf("server ACK\r\n");
+      sprintf(OLED_CHAR[11],"SEND.OK");
+      gfLcdRefresh = 1;
     } 
     else if (serverCode == SERVER_RESET) {
       sbi(gResetSw, SYSTEM_RSW);

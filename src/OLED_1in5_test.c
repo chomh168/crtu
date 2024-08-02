@@ -46,13 +46,11 @@
 //#define OLED_DC_1       gpwr(OLED_DC,1)
 
 
-extern void gpio_hs (const uint gpNum, char onoff );
+// extern void gpio_hs (const uint gpNum, char onoff );
 extern void OLED_1in5_Display(UBYTE *Image);
 void drv_lcd_1in5_oled(void);
-void flcd_refrash(void);
 extern char datetime[30];
-char OLED_CHAR[10][20];
-bool OLED_REFRESH[20];
+char OLED_CHAR[12][18];
 char* version = "V.240729";
 
 
@@ -155,58 +153,7 @@ uint8_t OLED_InitReg(void)
 	}	
 	else num++;
 	
-	return 0;
-//	    OLED_WriteReg(0xae);//--turn off oled panel
-//	
-//	    OLED_WriteReg(0x15);    //   set column address
-//	    OLED_WriteReg(0x00);    //  start column   0
-//	    OLED_WriteReg(0x7f);    //  end column   127
-//	
-//	    OLED_WriteReg(0x75);    //   set row address
-//	    OLED_WriteReg(0x00);    //  start row   0
-//	    OLED_WriteReg(0x7f);    //  end row   127
-//	
-//	    OLED_WriteReg(0x81);  // set contrast control
-//	    OLED_WriteReg(0x40);
-//	
-//	    OLED_WriteReg(0xa0);    // gment remap
-//	    OLED_WriteReg(0x51);   //51
-//	
-//	    OLED_WriteReg(0xa1);  // start line
-//	    OLED_WriteReg(0x00);
-//	
-//	    OLED_WriteReg(0xa2);  // display offset
-//	    OLED_WriteReg(0x00);
-//	
-//	    OLED_WriteReg(0xa4);    // rmal display
-//	    OLED_WriteReg(0xa8);    // set multiplex ratio
-//	    OLED_WriteReg(0x7f);
-//	
-//	    OLED_WriteReg(0xb1);  // set phase leghth
-//	    OLED_WriteReg(0xf1);
-//	
-//	    OLED_WriteReg(0xb3);  // set dclk
-//	    OLED_WriteReg(0x00);  //80Hz:0xc1 90Hz:0xe1   100Hz:0x00   110Hz:0x30 120Hz:0x50   130Hz:0x70     01
-//	
-//	    OLED_WriteReg(0xab);  //
-//	    OLED_WriteReg(0x01);  //
-//	
-//	    OLED_WriteReg(0xb6);  // set phase leghth
-//	    OLED_WriteReg(0x0f);
-//	
-//	    OLED_WriteReg(0xbe);
-//	    OLED_WriteReg(0x0f);
-//	
-//	    OLED_WriteReg(0xbc);
-//	    OLED_WriteReg(0x08);
-//	
-//	    OLED_WriteReg(0xd5);
-//	    OLED_WriteReg(0x62);
-//	
-//	    OLED_WriteReg(0xfd);
-//	    OLED_WriteReg(0x12); 
-
-	
+	return 0;	
 }
 
 static void OLED_SetWindow(UBYTE Xstart, UBYTE Ystart, UBYTE Xend, UBYTE Yend)
@@ -256,10 +203,7 @@ void Paint_plug_l(void){
 	Paint_DrawLine(3, 8, 13, 8, WHITE, DOT_PIXEL_1X1, LINE_STYLE_SOLID);
 	Paint_DrawLine(3, 9, 13, 9, WHITE, DOT_PIXEL_1X1, LINE_STYLE_SOLID);
 	Paint_DrawLine( 5, 10, 14,10, WHITE, DOT_PIXEL_1X1, LINE_STYLE_SOLID);
-	//
-	
-	//
-	
+
 	Paint_DrawLine( 5, 11, 15,11, WHITE, DOT_PIXEL_1X1, LINE_STYLE_SOLID);
 	Paint_DrawLine( 5, 12, 15,12, WHITE, DOT_PIXEL_1X1, LINE_STYLE_SOLID);
 	Paint_DrawLine( 5, 13, 15,13, WHITE, DOT_PIXEL_1X1, LINE_STYLE_SOLID);
@@ -270,10 +214,6 @@ void Paint_plug_l(void){
 	Paint_DrawLine( 3, 18, 12,18, WHITE, DOT_PIXEL_1X1, LINE_STYLE_SOLID);
 	Paint_DrawLine( 5, 19, 10,19, WHITE, DOT_PIXEL_1X1, LINE_STYLE_SOLID);
 	Paint_DrawLine( 5, 20, 8, 20, WHITE, DOT_PIXEL_1X1, LINE_STYLE_SOLID);
-
-	//Paint_DrawLine(50, 10, 80, 10, WHITE, DOT_PIXEL_1X1, LINE_STYLE_SOLID);
-	//Paint_DrawLine(0, 0, 128, 128, WHITE, DOT_PIXEL_1X1, LINE_STYLE_SOLID);
-	
 }
 
 
@@ -387,18 +327,18 @@ extern void drv_lcd_1in5_oled(void){
 			// Paint_DrawString_EN(10, 10, "TEST", &Font12, 0x1, 0xb);
 			// sprintf(OLED_CAHR[0],"%s",version);
 			Paint_DrawString_EN(0, 0, version, &Font12, 0, 1);
-			Paint_DrawString_EN(0, 10, "PS ID : ", &Font12, 0, 1);
-			Paint_DrawString_EN(7*9, 10, OLED_CHAR[0], &Font12, 0, 1);
-			Paint_DrawString_EN(0, 20, "------------------", &Font12, 0, 1);
+			Paint_DrawString_EN(0, 12, "PS ID : ", &Font12, 0, 1);
+			Paint_DrawString_EN(7*9, 12, OLED_CHAR[0], &Font12, 0, 1);
+			Paint_DrawString_EN(0, 24, "------------------", &Font12, 0, 1);
 			// Show image on page2
 			OLED_1in5_Display_test(BlackImage);
 			cnt = gSysCnt;
 			sDlSqc++;
 			break;
 		case 10:
-			if((gSysCnt - cnt) < 2000) break;
+			if((gSysCnt - cnt) < 1000) break;
 			cnt = gSysCnt;
-			if(gfLcdRefash == 1) sDlSqc = 11;
+			if(gfLcdRefresh == 1) sDlSqc = 11;
 			if(gflcdsleep_n == 0){ 
 				sDlSqc = 12;
 				OLED_WriteReg(0xAE);
@@ -406,7 +346,7 @@ extern void drv_lcd_1in5_oled(void){
 			if(isb(gResetSw,LCD_RSW))sDlSqc = 14; 
 			break;
 		case 11:
-			gfLcdRefash = 0;
+			gfLcdRefresh = 0;
 			
 			
 			// Paint_DrawString_EN(0, 20, "012345678901234567", &Font12, 1, 0);
@@ -414,16 +354,17 @@ extern void drv_lcd_1in5_oled(void){
 			// Paint_DrawNum(0, 0, count++, &Font12, 1, 1, 0);
 			// Paint_DrawNum(0, 10, 1234567890123456789, &Font12, 0, 1, 0);
 			// Paint_DrawNum(0, 20, count++, &Font12, 0, 1, 0);
-			Paint_DrawNum(0, 30, count++, &Font12, 0, 1, 0);
-			Paint_DrawNum(0, 40, count++, &Font12, 0, 1, 0);
-			Paint_DrawNum(0, 50, count++, &Font12, 0, 1, 0);
-			Paint_DrawNum(0, 60, count++, &Font12, 1, 1, 0);
-			Paint_DrawNum(0, 70, count++, &Font12, 1, 1, 0);
-			Paint_DrawNum(0, 80, count++, &Font12, 1, 1, 0);
-			Paint_DrawNum(0, 90, count++, &Font12, 1, 1, 0);
-			Paint_DrawNum(0, 100, count++, &Font12, 1, 1, 0);
-			Paint_DrawNum(0, 110, count++, &Font12, 1, 1, 0);
-			// flcd_refrash();
+			Paint_DrawString_EN(7*(9+5), 0, OLED_CHAR[1], &Font12, 0, 1);
+			Paint_DrawString_EN(7*(18-6), 24, OLED_CHAR[6], &Font12, 0, 1);
+			Paint_DrawString_EN(0, 36, OLED_CHAR[2], &Font12, 0, 1);
+			Paint_DrawString_EN(7*9, 36, OLED_CHAR[3], &Font12, 0, 1);
+			Paint_DrawString_EN(0, 48, OLED_CHAR[4], &Font12, 0, 1);
+			Paint_DrawString_EN(0, 60, OLED_CHAR[5], &Font12, 0, 1);
+			Paint_DrawString_EN(0, 72, OLED_CHAR[7], &Font12, 0, 1);
+			Paint_DrawString_EN(0, 84, OLED_CHAR[8], &Font12, 0, 1);
+			Paint_DrawString_EN(0, 96, OLED_CHAR[9], &Font12, 0, 1);
+			Paint_DrawString_EN(0, 108, OLED_CHAR[10], &Font12, 0, 1);
+			Paint_DrawString_EN(7*11, 108, OLED_CHAR[11], &Font12, 0, 1);
 			OLED_1in5_Display_test(BlackImage);
 			sDlSqc = 10; 
 			break;
@@ -450,16 +391,3 @@ extern void drv_lcd_1in5_oled(void){
 	}
 }
 
-
-void flcd_refrash(void){
-		Paint_DrawRectangle(80, 12, 90, 13, WHITE, DOT_PIXEL_1X1, DRAW_FILL_EMPTY);
-		Paint_DrawRectangle(60, 12, 70, 13, WHITE, DOT_PIXEL_1X1, DRAW_FILL_EMPTY);
-		Paint_DrawRectangle(110, 5, 120, 10, WHITE, DOT_PIXEL_1X1, DRAW_FILL_FULL);
-		Paint_DrawRectangle(110, 12, 120, 13, WHITE, DOT_PIXEL_1X1, DRAW_FILL_EMPTY);
-		Paint_DrawRectangle(110, 15, 120, 20, WHITE, DOT_PIXEL_1X1, DRAW_FILL_FULL);
-		Paint_DrawRectangle(1, 1, 128, 128, WHITE, DOT_PIXEL_1X1, DRAW_FILL_EMPTY);
-		Paint_plug_l();
-		Paint_DrawString_EN(10, 80, "i_love_U", &Font12, 0x1, 0xb);
-		Paint_DrawString_EN(10, 92, "soul_energy", &Font16, 0x2, 0xc);
-		//OLED_1in5_Display_test(BlackImage);
-}

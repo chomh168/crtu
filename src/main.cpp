@@ -84,7 +84,7 @@ void gpio_callback(uint gpio, uint32_t events){
  char   gLastChar_inv = 0;
  char   gNewCharInFlag = 0;
  //---------------------
- char gfLcdRefash = 0;
+ char gfLcdRefresh = 0;
  ui16 gflcdsleep_n = 0;
  
  char   gfUse_iot = 0;
@@ -159,7 +159,7 @@ bool trigger = false;
 extern see ee;
 bool vibCheck = false;
 extern char datetime[30];
-extern char OLED_CHAR[10][20];
+extern char OLED_CHAR[12][18];
  
 int main() {
 #ifndef PICO_DEFAULT_LED_PIN
@@ -270,11 +270,13 @@ void print_display(){
 	}
 	else if(vibCheck == true){
 		displayDelay = gSysCnt;
-		gfLcdRefash = 1;
+		gfLcdRefresh = 1;
 	}
 	else{
 		displayDelay = gSysCnt;
-		gfLcdRefash = 1;
+		sprintf(OLED_CHAR[4],"                 ");
+		sprintf(OLED_CHAR[5],"                 ");
+		gfLcdRefresh = 1;
 	}
 }
 
@@ -391,6 +393,22 @@ void recv_inv_raw_packet(){
 					sendPacketCount++;
 					// printf("invno - %d", nowInverter->invno);
 					//rx display
+					sprintf(OLED_CHAR[1],"RX%2d",nowInverter->invno);
+					sprintf(OLED_CHAR[2],"invNo:%2d",nowInverter->invno);
+					sprintf(OLED_CHAR[3],"ACKW:%4d",nowInverter->ackw/10);
+					sprintf(OLED_CHAR[4],"day:%6dKwh",nowInverter->dayTotal/10);
+					if(nowInverter->total>1000*1000)
+						sprintf(OLED_CHAR[5],"total:%d.%dMwh",nowInverter->total/1000, (nowInverter->total)%1000);
+					else if(nowInverter->total>1000*1000*100)
+						sprintf(OLED_CHAR[5],"total:%d.%dGwh",nowInverter->total/1000*1000, (nowInverter->total/1000)%1000*1000);
+					else
+						sprintf(OLED_CHAR[5],"total:%dKwh",nowInverter->total);
+					sprintf(OLED_CHAR[7],"ACV%5d%5d%5d",nowInverter->acvr,nowInverter->acvs,nowInverter->acvt);
+					sprintf(OLED_CHAR[8],"ACA%5d%5d%5d",nowInverter->acar,nowInverter->acas,nowInverter->acat);
+					sprintf(OLED_CHAR[9],"DCV:%3d DCA:%4d",nowInverter->dcv,nowInverter->dca);
+					sprintf(OLED_CHAR[10],"DCKW:%4d",nowInverter->dckw/10);
+					
+					gfLcdRefresh = 1;
 				}
 				isValid = false;
 			}
@@ -441,6 +459,17 @@ void send_inv_packet(){
 		}
 		set_send_packet_txdataInv();
 		// tx display
+		sprintf(OLED_CHAR[1],"TX%2d",nowInverter->invno);
+		sprintf(OLED_CHAR[2],"         ");
+		sprintf(OLED_CHAR[3],"         ");
+		sprintf(OLED_CHAR[4],"                 ");
+		sprintf(OLED_CHAR[5],"                 ");
+		
+		sprintf(OLED_CHAR[7],"                  ");
+		sprintf(OLED_CHAR[8],"                  ");
+		sprintf(OLED_CHAR[9],"                  ");
+		sprintf(OLED_CHAR[10],"          ");
+		gfLcdRefresh = 1;
 	}
 	else{
 		delayCount++;
@@ -459,7 +488,7 @@ void send_inv_packet(){
 void init_inverter(){
 	if(ee.PortNumber == -1){
 		ee.PortNumber = 99999999;
-		ee.InverterCount = 1;
+		ee.InverterCount = 3;
 		ee.eeModelInverters[0] = 7;
 		ee.eeModelInverterIds[0] = 1;
 		ee.eeModelInverters[1] = 5;
