@@ -54,9 +54,9 @@ extern char txdatadbg[];
 extern see ee;
 
 extern my_dev devInfo;
-extern unsigned char passThroughFlag;
+unsigned char passThroughFlag;
 extern ui16 nml35State;
-extern char gLoraTossFlag;
+// extern char gLoraTossFlag;
 
 extern float gNowBattLv; 
 extern float gNowtemp;   

@@ -274,8 +274,6 @@ void print_display(){
 	}
 	else{
 		displayDelay = gSysCnt;
-		sprintf(OLED_CHAR[4],"                 ");
-		sprintf(OLED_CHAR[5],"                 ");
 		gfLcdRefresh = 1;
 	}
 }
@@ -398,7 +396,7 @@ void recv_inv_raw_packet(){
 					sprintf(OLED_CHAR[3],"ACKW:%4d",nowInverter->ackw/10);
 					sprintf(OLED_CHAR[4],"day:%6dKwh",nowInverter->dayTotal/10);
 					if(nowInverter->total>1000*1000)
-						sprintf(OLED_CHAR[5],"total:%d.%dMwh",nowInverter->total/1000, (nowInverter->total)%1000);
+						sprintf(OLED_CHAR[5],"total:%d.%dMwh",nowInverter->total/1000, (nowInverter->total/10)%1000);
 					else if(nowInverter->total>1000*1000*100)
 						sprintf(OLED_CHAR[5],"total:%d.%dGwh",nowInverter->total/1000*1000, (nowInverter->total/1000)%1000*1000);
 					else
@@ -619,12 +617,6 @@ void spi_ini_dot(void){
 	gpio_set_dir(DOT_DEFAULT_SPI_CSN_PIN, GPIO_OUT);
 	gpio_put(DOT_DEFAULT_SPI_CSN_PIN, 1);
 	bi_decl(bi_1pin_with_name(DOT_DEFAULT_SPI_CSN_PIN, "SPI CS"));
-    
-//	gpio_init(DOT_DEFAULT_DEV_SEL_PIN);
-//	gpio_set_dir(DOT_DEFAULT_DEV_SEL_PIN, GPIO_OUT);
-//	gpio_put(DOT_DEFAULT_DEV_SEL_PIN, 1);
-	// Make the CS pin available to picotool
-    
 }
 
 float cal_temp(float volt){
@@ -949,11 +941,6 @@ void on_uart_rx_0() {
             rx_buffer_overflow0=1;
             }
             olddata = ch;    
-//        if (uart_is_writable(UART_ID_0)) {
-            // Change it slightly first!
-            //ch++;
-           // printf("%c",ch);
-//        }
         chars_rxed_0++;
         
     }
@@ -973,42 +960,10 @@ void on_uart_rx_1() {
             rx_buffer_overflow1=1;
             }
             olddata = ch;    
-//        if (uart_is_writable(UART_ID)) {
-            // Change it slightly first!
-            //ch++;
-            //uart_putc(UART_ID, ch);
-//        }
         chars_rxed++;
         
     }
 }
-
-
-
-void stack_to_pkbuf(char * addr , int num){
-    static char olddata = 0;
-		int len = num ;
-       // uint8_t ch = uart_getc(UART_ID_1);
-        // Can we send it back?
-         while(len--){
-	         rx_buffer_pk[rx_wr_index_pk++]=*addr++;
-	         if (rx_wr_index_pk == PK_BUFFER_SIZE) rx_wr_index_pk=0;
-	         if (++rx_counter_pk == PK_BUFFER_SIZE)
-	            {
-	            rx_counter_pk=0;
-	            rx_buffer_overflow_pk=1;
-	            }
-	           // olddata = ch;
-         	} 
-	//        if (uart_is_writable(UART_ID)) {
-	            // Change it slightly first!
-	            //ch++;
-	            //uart_putc(UART_ID, ch);
-	//        	}
-  //      chars_rxed++;
-        
-}
-
 
 void on_stdio_usb_rx() {
     static char olddata = 0;
@@ -1023,12 +978,6 @@ void on_stdio_usb_rx() {
             rx_buffer_overflow4=1;
             }
             olddata = ch;    
-//        if (uart_is_writable(UART_ID)) {
-            // Change it slightly first!
-            //ch++;
-            //uart_putc(UART_ID, ch);
-//        }
-
         chars_rxed_u++;
         
     }
@@ -1363,186 +1312,7 @@ void uart_ini_rx_int(void){
 
 	gpio_set_function(UART_TX_PIN_0, GPIO_FUNC_UART);
 	gpio_set_function(UART_RX_PIN_0, GPIO_FUNC_UART);
-
-	// Actually, we want a different speed
-	// The call will return the actual baud rate selected, which will be as close as
-	// possible to that requested
-//	int __unused actual = uart_set_baudrate(UART_ID_0, BAUD_RATE_0);
-//    int __unused actual_0 = uart_set_baudrate(UART_ID_0, BAUD_RATE_0);
-
-	// Set UART flow control CTS/RTS, we don't want these, so turn them off
-//	uart_set_hw_flow(UART_ID_0, false, false);
-//	uart_set_hw_flow(UART_ID_0, false, false);
-
-	// Set our data format
-//	uart_set_format(UART_ID_0, DATA_BITS_0, STOP_BITS_0, PARITY_0);
-//	  uart_set_format(UART_ID_0, DATA_BITS, STOP_BITS, PARITY);
-
-	// Turn off FIFO's - we want to do this character by character
-//	uart_set_fifo_enabled(UART_ID_0, false);
-//	  uart_set_fifo_enabled(UART_ID_0, false);
-
-	// Set up a RX interrupt
-	// We need to set up the handler first
-	// Select correct interrupt for the UART we are using
-//	int UART_IRQ = UART_ID_0 == uart0 ? UART0_IRQ : UART1_IRQ;
-//	  int UART_IRQ0 = UART_ID_0 == uart1 ? UART0_IRQ : UART1_IRQ;
-
-	// And set up and enable the interrupt handlers
-//	irq_set_exclusive_handler(UART_IRQ, on_uart_rx_0);
-//	  irq_set_exclusive_handler(UART_IRQ0, on_uart_rx_0);
-	
-//	irq_set_enabled(UART_IRQ, true);
-//	  irq_set_enabled(UART_IRQ0, true);
-
-	// Now enable the UART to send interrupts - RX only
-//	uart_set_irq_enables(UART_ID_0, true, false);
-//	  uart_set_irq_enables(UART_ID_0, true, false);
-	
-
-	// OK, all set up.
-	// Lets send a basic string out, and then run a loop and wait for RX interrupts
-	// The handler will count them, but also reflect the incoming data back with a slight change!
-//	uart_puts(UART_ID_0, "\nHello, uart interrupts\n");
-//	  uart_puts(UART_ID_0, "\nHello, uart interrupts\n");
 }
-
-unsigned int  rp_cmd_len1;
-unsigned char  rp_cmd_sqc1;
-unsigned int  rp_cmd_idx1;
-
-char rp_cmd_buf1[RX_BUFFER_SIZE1] = {0};
-char passThroughFlag = 0;
-char gLoraTossFlag = 0;
-
-void rs_rece_uart1_inv(void)
-  {
-    char data , dtBuf  ;
-    static char predata ;
-    static char index_r=0;
-    char cmdbuf[RX_BUFFER_SIZE1+5] = {0} ;
-	static unsigned char  rp_cmd_sub_sqc1;
-	static int receive_timeout1;
-    static char toss_dateInFlag;
-		int devNum = 0;
-		char * buf_addr;
-		static ui16 divNum ;
-	
-    switch(rp_cmd_sqc1)
-    {
-    case 0:
-      rp_cmd_len1 = 0;
-      rp_cmd_idx1 = 0;
-      rp_cmd_sub_sqc1 = 0;
-      rp_cmd_sqc1++;
-	  	receive_timeout1 = gSysCnt;
-	  	toss_dateInFlag = 0 ;
-			divNum = 0 ;
-      break;
-    case 1:
-       if(rx_wr_index1 != rx_rd_index1){
-       	 gDbgFuseCnt = 5;	
-         data = getchar1_h ();
-
-				 if(passThroughFlag){
-				 	 uart_putc(UART_ID_0, data);
-					 printf("%c",data);
-					 break;
-				 	}
-				 if(( rp_cmd_len1 == 0 ) && (data == '$')){
-					toss_dateInFlag = 1; 
-				 }
-				 if(toss_dateInFlag)
-			   	 	gNewCharInFlag = 0;
-				 else gNewCharInFlag =1;	
-			 	
-			   receive_timeout1 = gSysCnt;
-			 
-	         switch(data)
-	         {
-	         case 0x0a:  //CR
-	            if(predata == 0x0d) rp_cmd_sqc1++;
-							
-	           //auto_read_cnt = 7;
-	         case '$':
-			 	 
-			 default:  
-	           if(rp_cmd_len1 > (RX_BUFFER_SIZE1-2)) rp_cmd_len1 = (RX_BUFFER_SIZE1-2);
-			   rp_cmd_buf1[rp_cmd_len1++] = data;
-	           rp_cmd_buf1[rp_cmd_len1] = 0;
-			   predata = data;
-	          break;
-	         }
-       }
-	     if((gSysCnt - receive_timeout1) > 250){
-				 if(rp_cmd_len1 > 0) rp_cmd_sqc1++;
-				 else rp_cmd_sqc1 = 0; 
-			 }
-       break;
-     case 2:
-        // flagUart3ReactionPasingComp = wiz_pasing_data(wiz_cmd_buf);
-        if(gLoraTossFlag){ rp_cmd_sqc1++ ; break;}
-		     if(toss_dateInFlag == 1){
-		       toss_dateInFlag = 0;
-			     devNum = atoi(&rp_cmd_buf1[1]);
-			      if(devNum == devInfo.devNum_485comm){
-		          strncpy(cmdbuf,&rp_cmd_buf1[4],rp_cmd_len1-6);
-							printf("%s",cmdbuf);
-				      strcpy(txdataIot,cmdbuf);
-				      my_puts_string(ToIot);
-					 }
-	 			}
-         if( dbgLevel >= 0  ){
-			   sprintf(txdatadbg ,"\r\n<0:%s",rp_cmd_buf1);
-			   memset(rp_cmd_buf1,0,sizeof(rp_cmd_buf1));
-			   my_puts_string (ToDbg);
-         }
-           //my_Nput_string (DBG_PORT, wiz_cmd_buf, wiz_cmd_len );
-           //sbi (flagSendData , DBG_PORT);
-        
-       rp_cmd_sub_sqc1 = 0;
-       rp_cmd_sqc1 = 0;
-       break;
-     case 3:    //  lora q_buf
-		 		 buf_addr = &rp_cmd_buf1[divNum];
-				 sprintf(txdataIot,"AT=U");
-		     if((rp_cmd_len1 - divNum) > 90){
-					 strncat(txdataIot,buf_addr,90);
-					 rp_cmd_sqc1++;
-				 }else{
-				 	strncat(txdataIot,buf_addr,(rp_cmd_len1-divNum));
-					rp_cmd_sqc1= 5;
-				 }
-				 cbi(nml35State,12);
-				 strcat(txdataIot,"\r");
-				 my_puts_string(ToIot);
-				 receive_timeout1 = gSysCnt ;
- //      if(swUsart4dbgshow & bv(USARTDBGSWHOW_IN0))
- //      {
- //        sprintf(cmdbuf,"0<"); 
- //        strncpy(cmdbuf+2,wiz_cmd_buf,wiz_cmd_len);
- //        my_Nput_string (DBG_PORT, cmdbuf, wiz_cmd_len + 2 );
- //      }
- //      if(cmdPasingFromW107() == CMD_CONT ) wiz_cmd_sqc = 1;
- //      else wiz_cmd_sqc = 0; 
-       break;
-     case 4:
-		 	 if((gSysCnt - receive_timeout1) < 800) break;
-			 //if(!isb(nml35State, 12)) break;
-			 divNum += 90;
-		   rp_cmd_sqc1 = 3;
-		 	 break;
-     default:
-       memset(rp_cmd_buf1,0,sizeof(rp_cmd_buf1));
-       rp_cmd_sqc1 = 0;
-       break;
-    }
-  }
-
-
-
-
-
 
 char rp_cmd_buf0[RX_BUFFER_SIZE0] = {0};
 char pk_buf[PK_BUFFER_SIZE] = {0};
@@ -1761,88 +1531,88 @@ void rs_rece_uart0_iot(void) {
 
 
 void rs_rece_usb_0(void)	  {
-						 char data , dtBuf	;
-						 static ui16 subCmdStatPosition= 0;
-						 static char olddata;
-						 static int receive_timeout;
-						 unsigned char	rp_cmd_sub_sqc0;
-					 static unsigned int sCntuCnt = 0;
-					 
-						 char cmdbuf[USB_BUFFER_SIZE+5] = {0} ;
-		  
-					 static unsigned int  rp_cmd_len0;
-					 static unsigned char rp_cmd_sqc0;
-					 static unsigned int  rp_cmd_idx0;
-		  
-						 switch(rp_cmd_sqc0)
-						 {
-						 case 0:
-							 rp_cmd_len0 = 0;
-							 rp_cmd_idx0 = 0;
-							 rp_cmd_sub_sqc0 = 0;
-							 subCmdStatPosition = 0;
-							 rp_cmd_sqc0++; 
-							 receive_timeout  = gSysCnt;
-					 sCntuCnt = 0;
-							 break;
-						 case 1:
-								 if(rx_wr_index_u != rx_rd_index_u) {
-										 gDbgFuseCnt = 3; 
-										 data = getchar_usb_h ();
-										 receive_timeout = gSysCnt;
-							 if(sCntuCnt == 0){
-								  sCntuCnt = 200;
-								sprintf(cmdbuf,"<U:");
-								  printf("%s", cmdbuf );
-							  }
-							 
-										 switch(data)
-										 {
-										 case ' ':	//CR							  //--	check < 
-											  // if(olddata == '>') gImd_reaction = 1;
-										 case 0x0a:
-												 if(olddata == 0x0d) rp_cmd_sqc0++;
-										 
-										 default:
-							 // 			 if(dbgLevel > 0)
-							 // 				 putchar1 (data);
-											 if(rp_cmd_len0 >= (USB_BUFFER_SIZE - 2)) rp_cmd_len0 = (USB_BUFFER_SIZE - 2);
-											 rp_cmd_buf0[rp_cmd_len0++] = data;
-											 rp_cmd_buf0[rp_cmd_len0] = 0;
-											 olddata = data;
-										  break;
-										 }
-		  
-									 }
-									 if(gSysCnt != receive_timeout ){
-									  receive_timeout = gSysCnt;
-									  DEC(sCntuCnt);
-									  }
-						 if(sCntuCnt == 0){
-							 if(rp_cmd_len0 != 0)
-							 rp_cmd_sqc0++;
-						  }  
-							 break;
-						 case 2:
-							 memcpy(cmdbuf,rp_cmd_buf0,rp_cmd_len0);
-						   my_nputs_string (ToDbg, cmdbuf, rp_cmd_len0 );
-		  //			 memcpy(txdataInv,cmdbuf,rp_cmd_len0);
-		  //				 sendReactionTriger = 1;
-					 
-						   Cmd_judge_usb(rp_cmd_buf0);
-							 
-							 rp_cmd_sub_sqc0 = 0;
-							 rp_cmd_sqc0 = 0;
-							 break;
-						 case 3:
-						 default:
-							 rp_cmd_sqc0 = 0;
-							 break;
-						 }
-					 }
+	char data , dtBuf	;
+	static ui16 subCmdStatPosition= 0;
+	static char olddata;
+	static int receive_timeout;
+	unsigned char	rp_cmd_sub_sqc0;
+	static unsigned int sCntuCnt = 0;
 
- 
- 
+	char cmdbuf[USB_BUFFER_SIZE+5] = {0} ;
+
+	static unsigned int  rp_cmd_len0;
+	static unsigned char rp_cmd_sqc0;
+	static unsigned int  rp_cmd_idx0;
+
+	switch(rp_cmd_sqc0)
+	{
+		case 0:
+			rp_cmd_len0 = 0;
+			rp_cmd_idx0 = 0;
+			rp_cmd_sub_sqc0 = 0;
+			subCmdStatPosition = 0;
+			rp_cmd_sqc0++; 
+			receive_timeout  = gSysCnt;
+			sCntuCnt = 0;
+			break;
+		case 1:
+			if(rx_wr_index_u != rx_rd_index_u) {
+				gDbgFuseCnt = 3; 
+				data = getchar_usb_h ();
+				receive_timeout = gSysCnt;
+				if(sCntuCnt == 0){
+					sCntuCnt = 200;
+					sprintf(cmdbuf,"<U:");
+					printf("%s", cmdbuf );
+				}
+		
+				switch(data)
+				{
+					case ' ':	//CR							  //--	check < 
+						// if(olddata == '>') gImd_reaction = 1;
+					case 0x0a:
+							if(olddata == 0x0d) rp_cmd_sqc0++;
+					
+					default:
+			// 			 if(dbgLevel > 0)
+			// 				 putchar1 (data);
+						if(rp_cmd_len0 >= (USB_BUFFER_SIZE - 2)) rp_cmd_len0 = (USB_BUFFER_SIZE - 2);
+						rp_cmd_buf0[rp_cmd_len0++] = data;
+						rp_cmd_buf0[rp_cmd_len0] = 0;
+						olddata = data;
+					break;
+				}
+
+			}
+			if(gSysCnt != receive_timeout ){
+				receive_timeout = gSysCnt;
+				DEC(sCntuCnt);
+			}
+			if(sCntuCnt == 0){
+				if(rp_cmd_len0 != 0)
+				rp_cmd_sqc0++;
+			}  
+			break;
+	case 2:
+		memcpy(cmdbuf,rp_cmd_buf0,rp_cmd_len0);
+	my_nputs_string (ToDbg, cmdbuf, rp_cmd_len0 );
+//			 memcpy(txdataInv,cmdbuf,rp_cmd_len0);
+//				 sendReactionTriger = 1;
+
+	Cmd_judge_usb(rp_cmd_buf0);
+		
+		rp_cmd_sub_sqc0 = 0;
+		rp_cmd_sqc0 = 0;
+		break;
+	case 3:
+	default:
+		rp_cmd_sqc0 = 0;
+		break;
+	}
+}
+
+
+
 
 
 
